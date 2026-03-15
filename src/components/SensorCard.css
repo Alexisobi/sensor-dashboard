@@ -1,0 +1,59 @@
+.sensor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sensor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sensor-title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.sensor-icon-wrapper {
+  padding: 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sensor-value-container {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.sensor-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.sensor-unit {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.sensor-trend {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: auto;
+}
+
+.sensor-trend.positive {
+  color: #10b981;
+}
+
+.sensor-trend.negative {
+  color: #ef4444;
+}

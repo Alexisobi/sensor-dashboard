@@ -1,0 +1,27 @@
+.chart-widget {
+  display: flex;
+  flex-direction: column;
+  height: 350px;
+}
+
+.chart-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.chart-container {
+  flex: 1;
+  width: 100%;
+}
+
+.custom-tooltip {
+  border: 1px solid var(--border-color);
+}
+
+.custom-tooltip .label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0 0 4px 0;
+}
