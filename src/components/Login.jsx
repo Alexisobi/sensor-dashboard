@@ -6,14 +6,21 @@ const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simulate a brief loading animation before login
-    setIsAnimating(true);
-    setTimeout(() => {
-      onLogin(); // Tell App.jsx we are authenticated
-    }, 800);
+    setError('');
+
+    if (email === 'abcde' && password === 'cpe2026') {
+      // Simulate a brief loading animation before login
+      setIsAnimating(true);
+      setTimeout(() => {
+        onLogin(); // Tell App.jsx we are authenticated
+      }, 800);
+    } else {
+      setError('Invalid username or password');
+    }
   };
 
   return (
@@ -28,14 +35,20 @@ const Login = ({ onLogin }) => {
           <h1 className="login-title">SensoDash</h1>
         </div>
 
+        {error && (
+          <div style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.9rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="login-form">
           <div className="input-group">
             <span className="input-icon">
               <Mail size={18} />
             </span>
-            <input 
-              type="text" 
-              placeholder="Username or Email" 
+            <input
+              type="text"
+              placeholder="Username or Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -47,9 +60,9 @@ const Login = ({ onLogin }) => {
             <span className="input-icon">
               <Lock size={18} />
             </span>
-            <input 
-              type="password" 
-              placeholder="Password" 
+            <input
+              type="password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
