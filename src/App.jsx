@@ -395,6 +395,33 @@ function App() {
                   colors={['var(--color-energy)']}
                 />
               </div>
+
+              <div className="glass-card" style={{ height: '400px' }}>
+                <LineChartWidget 
+                  title={`Humidity Trends (${reportsTimeframe})`}
+                  data={reportsData}
+                  dataKeys={['humidity']}
+                  colors={['var(--color-humidity)']}
+                />
+              </div>
+
+              <div className="glass-card" style={{ height: '400px' }}>
+                <LineChartWidget 
+                  title={`Light Intensity (${reportsTimeframe})`}
+                  data={reportsData}
+                  dataKeys={['light']}
+                  colors={['var(--color-light)']}
+                />
+              </div>
+
+              <div className="glass-card" style={{ height: '400px' }}>
+                <LineChartWidget 
+                  title={`Occupancy Rate (${reportsTimeframe})`}
+                  data={reportsData}
+                  dataKeys={['occupancy']}
+                  colors={['var(--color-occupancy)']}
+                />
+              </div>
             </div>
           </div>
         )}
