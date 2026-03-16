@@ -9,7 +9,8 @@ import {
   Settings,
   Bell,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { collection, onSnapshot, query, orderBy, limit, doc } from 'firebase/firestore';
@@ -183,6 +184,20 @@ function App() {
             }}>
             <Bell size={20} />
             Alerts
+          </div>
+          <div 
+            className="sidebar-link"
+            onClick={() => setIsAuthenticated(false)}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+              borderRadius: '12px', 
+              backgroundColor: 'transparent', 
+              color: '#ef4444', 
+              fontWeight: 'normal',
+              marginTop: '1rem'
+            }}>
+            <LogOut size={20} />
+            Logout
           </div>
         </nav>
         
