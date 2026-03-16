@@ -186,7 +186,7 @@ function App() {
           </div>
         </nav>
         
-        <div style={{ marginTop: 'auto', padding: '16px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+        <div className="sidebar-status" style={{ marginTop: 'auto', padding: '16px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>System Status</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
@@ -204,10 +204,16 @@ function App() {
               {format(currentTime, 'EEEE, MMMM do, yyyy | HH:mm:ss')}
             </p>
           </div>
-          <button style={{ backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Bell size={18} />
-            <span>2 Alerts</span>
-          </button>
+          <div className="header-actions">
+            <div className="mobile-sensor-status">
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+              <span style={{ fontSize: '0.85rem', color: 'white' }}>Status: Active</span>
+            </div>
+            <button className="alerts-btn" style={{ backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer' }}>
+              <Bell size={18} />
+              <span style={{ fontSize: '0.9rem' }}>2 Alerts</span>
+            </button>
+          </div>
         </header>
 
         {activeTab === 'dashboard' && (

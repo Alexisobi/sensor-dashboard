@@ -103,8 +103,27 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+.mobile-sensor-status {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 /* Responsive Design for Mobile & Tablets */
 @media (max-width: 768px) {
+  .sidebar-status {
+    display: none !important;
+  }
   .app-container {
     flex-direction: column;
     overflow-y: auto;
@@ -154,8 +173,17 @@
     align-items: flex-start;
     gap: 1rem;
   }
-  .header button {
+  .header-actions {
     width: 100%;
+    justify-content: space-between;
+  }
+  .mobile-sensor-status {
+    display: flex;
+    flex: 1;
     justify-content: center;
+  }
+  .header-actions .alerts-btn {
+    width: auto;
+    flex: 1;
   }
 }
