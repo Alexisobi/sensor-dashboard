@@ -87,3 +87,51 @@
   transform: translateY(-2px);
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
 }
+
+/* Responsive Design for Mobile & Tablets */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .sidebar {
+    width: 100%;
+    padding: 1.5rem 1rem;
+    gap: 1rem;
+    border-right: none;
+    border-bottom: var(--glass-border);
+  }
+  .sidebar nav {
+    flex-direction: row !important;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    /* Hide scrollbar for a cleaner look */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sidebar-link {
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+    min-width: fit-content;
+  }
+  .main-content {
+    padding: 1rem;
+    overflow-y: visible;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr; /* Stack cards natively on mobile */
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .header button {
+    width: 100%;
+    justify-content: center;
+  }
+}
