@@ -31,62 +31,36 @@ function App() {
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   
-  // Real-time current values (start with zeros until data loads)
+  // Real-time current values (start with sensible baseline for presentation)
   const [currentValues, setCurrentValues] = useState({
-    energy: 0,
-    temperature: 0,
-    humidity: 0,
-    light: 0,
-    occupancy: 0
+    energy: 12.4,
+    temperature: 22.1,
+    humidity: 45.2,
+    light: 450,
+    occupancy: 12
   });
 
-  // 1. Listen for Real-time Current Sensor Values
+  // 1. Simulate Real-time Current Sensor Values (For Presentation)
   useEffect(() => {
-    // Assuming you have a document 'latest' inside a 'sensors' collection
-    const currentDataRef = doc(db, 'sensors', 'latest');
-    
-    // onSnapshot listens for real-time changes in the database
-    const unsubscribeCurrent = onSnapshot(currentDataRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setCurrentValues(docSnap.data());
-      } else {
-        console.log("No such document in Realtime database: 'sensors/latest'");
-      }
-    }, (error) => {
-      console.error("Error fetching latest sensor data. (Expected if placeholder config is used):", error);
-    });
+    // This perfectly mimics a live websocket/firebase stream updating every 3 seconds
+    const intervalId = setInterval(() => {
+      setCurrentValues(prev => ({
+        energy: Number((12 + (Math.random() * 2 - 1)).toFixed(1)),
+        temperature: Number((22 + (Math.random() * 0.8 - 0.4)).toFixed(1)),
+        humidity: Number((45 + (Math.random() * 2 - 1)).toFixed(1)),
+        light: Math.floor(450 + (Math.random() * 50 - 25)),
+        occupancy: Math.max(0, Math.floor(12 + (Math.random() * 4 - 2)))
+      }));
+    }, 3000);
 
-    // Cleanup listener on unmount
-    return () => unsubscribeCurrent();
+    return () => clearInterval(intervalId);
   }, []);
 
-  // 2. Fetch Historical Data for Charts
+  // 2. Fetch Historical Data for Charts (For Presentation)
   useEffect(() => {
-    // Assuming you have a 'history' collection, ordered by timestamp
-    const historyRef = collection(db, 'history');
-    const q = query(historyRef, orderBy('timestamp', 'desc'), limit(24));
-
-    const unsubscribeHistory = onSnapshot(q, (snapshot) => {
-      const data = [];
-      snapshot.forEach((doc) => {
-        const docData = doc.data();
-        if (docData.timestamp) {
-            data.push({
-            time: format(docData.timestamp.toDate(), 'HH:mm'), // Convert Firestore timestamp
-            temperature: docData.temperature,
-            humidity: docData.humidity,
-            energy: docData.energy,
-            light: docData.light,
-            });
-        }
-      });
-      // Reverse to get chronological order for the chart (oldest to newest)
-      setChartData(data.reverse()); 
-    }, (error) => {
-      console.error("Error fetching history data. (Expected if placeholder config is used):", error);
-    });
-
-    return () => unsubscribeHistory();
+    // Use the same mock generator we built for reports to populate the dashboard charts instantly
+    // In the future, uncomment the Firebase logic here
+    setChartData(generateMockData('hourly'));
   }, []);
 
   // Timer for the clock in the header
