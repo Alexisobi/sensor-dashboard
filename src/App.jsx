@@ -139,7 +139,8 @@ function App() {
         temperature: baseTemp + (Math.random() * 4 - 2),
         humidity: baseHum + (Math.random() * 10 - 5),
         energy: baseEnergy + (Math.random() * 5 - 2),
-        light: Math.floor(Math.random() * 500 + 300)
+        light: Math.floor(Math.random() * 500 + 300),
+        occupancy: Math.max(0, Math.floor(12 + (Math.random() * 8 - 4)))
       });
     }
     return data;
