@@ -10,9 +10,10 @@ import {
   Bell,
   Menu,
   X,
-  LogOut
+  LogOut,
+  BarChart2
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
 import { collection, onSnapshot, query, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from './firebase'; // Import the db instance
 
@@ -26,7 +27,9 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [reportsTimeframe, setReportsTimeframe] = useState('hourly'); // 'hourly', 'daily', 'weekly', 'monthly'
   const [chartData, setChartData] = useState([]); // Start empty
+  const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   
   // Real-time current values (start with zeros until data loads)
   const [currentValues, setCurrentValues] = useState({
@@ -122,6 +125,57 @@ function App() {
     };
   }, [isAuthenticated]);
 
+  // Generate Mock Data for Reports based on timeframe
+  const generateMockData = (timeframe) => {
+    const data = [];
+    const now = new Date();
+    
+    let points = 24;
+    let timeFormatter = (d) => format(d, 'HH:mm');
+    let subtractor = subHours;
+    let baseTemp = 22;
+    let baseHum = 45;
+    let baseEnergy = 12;
+
+    switch(timeframe) {
+      case 'daily':
+        points = 7;
+        timeFormatter = (d) => format(d, 'EEE'); // Mon, Tue
+        subtractor = subDays;
+        break;
+      case 'weekly':
+        points = 4;
+        timeFormatter = (d) => `Week ${format(d, 'w')}`;
+        subtractor = subWeeks;
+        break;
+      case 'monthly':
+        points = 12;
+        timeFormatter = (d) => format(d, 'MMM'); // Jan, Feb
+        subtractor = subMonths;
+        break;
+      default: // hourly
+        points = 24;
+        break;
+    }
+
+    for (let i = points - 1; i >= 0; i--) {
+      const date = subtractor(now, i);
+      data.push({
+        time: timeFormatter(date),
+        temperature: baseTemp + (Math.random() * 4 - 2),
+        humidity: baseHum + (Math.random() * 10 - 5),
+        energy: baseEnergy + (Math.random() * 5 - 2),
+        light: Math.floor(Math.random() * 500 + 300)
+      });
+    }
+    return data;
+  };
+
+  // Update reports data when timeframe changes
+  useEffect(() => {
+    setReportsData(generateMockData(reportsTimeframe));
+  }, [reportsTimeframe]);
+
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;
   }
@@ -171,6 +225,19 @@ function App() {
             }}>
             <Settings size={20} />
             Sensors & Config
+          </div>
+          <div 
+            className={`sidebar-link ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('reports'); setIsMobileMenuOpen(false); }}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+              borderRadius: '12px', 
+              backgroundColor: activeTab === 'reports' ? 'rgba(255,255,255,0.1)' : 'transparent', 
+              color: activeTab === 'reports' ? 'white' : 'var(--text-secondary)', 
+              fontWeight: activeTab === 'reports' ? 500 : 'normal'
+            }}>
+            <BarChart2 size={20} />
+            Reports & Analytics
           </div>
           <div 
             className={`sidebar-link ${activeTab === 'alerts' ? 'active' : ''}`}
@@ -291,6 +358,71 @@ function App() {
               />
             </div>
           </>
+        )}
+
+        {activeTab === 'reports' && (
+          <div className="reports-section">
+            <div className="reports-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.5rem' }}>Historical Analytics</h3>
+              
+              <div className="timeframe-selector" style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '12px', border: 'var(--glass-border)' }}>
+                {['hourly', 'daily', 'weekly', 'monthly'].map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setReportsTimeframe(tf)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: reportsTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
+                      color: reportsTimeframe === tf ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      fontWeight: reportsTimeframe === tf ? 600 : 400,
+                      textTransform: 'capitalize',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Average Temperature</span>
+                <span style={{ fontSize: '2rem', fontWeight: 700 }}>22.4°C</span>
+              </div>
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Peak Energy Usage</span>
+                <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--color-energy)' }}>18.2 kWh</span>
+              </div>
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Data Points Logged</span>
+                <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--color-humidity)' }}>{reportsData.length}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="glass-card" style={{ height: '400px' }}>
+                <LineChartWidget 
+                  title={`Temperature Trends (${reportsTimeframe})`}
+                  data={reportsData}
+                  dataKeys={['temperature']}
+                  colors={['var(--color-temp)']}
+                />
+              </div>
+              
+              <div className="glass-card" style={{ height: '400px' }}>
+                <LineChartWidget 
+                  title={`Energy Consumption (${reportsTimeframe})`}
+                  data={reportsData}
+                  dataKeys={['energy']}
+                  colors={['var(--color-energy)']}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {activeTab === 'config' && (
