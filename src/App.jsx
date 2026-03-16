@@ -7,7 +7,9 @@ import {
   Users,
   LayoutDashboard,
   Settings,
-  Bell
+  Bell,
+  Menu,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { collection, onSnapshot, query, orderBy, limit, doc } from 'firebase/firestore';
@@ -22,6 +24,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [chartData, setChartData] = useState([]); // Start empty
   
   // Real-time current values (start with zeros until data loads)
@@ -126,17 +129,25 @@ function App() {
     <div className="app-container">
       {/* Sidebar Layout */}
       <aside className="sidebar">
-        <div>
-          <h1>SensoDash</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-            Real-time Monitoring facility
-          </p>
+        <div className="sidebar-header">
+          <div>
+            <h1>SensoDash</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+              Real-time Monitoring facility
+            </p>
+          </div>
+          <button 
+            className="mobile-nav-toggle" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
         
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '2rem' }}>
+        <nav className={isMobileMenuOpen ? 'mobile-open' : ''} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '2rem' }}>
           <div 
             className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
               borderRadius: '12px', 
@@ -149,7 +160,7 @@ function App() {
           </div>
           <div 
             className={`sidebar-link ${activeTab === 'config' ? 'active' : ''}`}
-            onClick={() => setActiveTab('config')}
+            onClick={() => { setActiveTab('config'); setIsMobileMenuOpen(false); }}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
               borderRadius: '12px', 
@@ -162,7 +173,7 @@ function App() {
           </div>
           <div 
             className={`sidebar-link ${activeTab === 'alerts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('alerts')}
+            onClick={() => { setActiveTab('alerts'); setIsMobileMenuOpen(false); }}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
               borderRadius: '12px', 
