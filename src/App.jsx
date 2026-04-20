@@ -42,6 +42,12 @@ function App() {
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
+    // --- DIAGONSTICS: Track connection state directly ---
+    const connectedRef = ref(db, ".info/connected");
+    const unsubConnected = onValue(connectedRef, (snap) => {
+      console.log("📡 Firebase Connection Status:", snap.val() === true ? "ONLINE 🟢" : "OFFLINE / CONNECTING 🔴");
+    });
+
     // Listen to Firebase 'live_data' path for real-time updates
     const currentRef = ref(db, 'live_data');
     
