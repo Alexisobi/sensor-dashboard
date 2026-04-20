@@ -11,10 +11,7 @@ import {
   Menu,
   X,
   LogOut,
-  BarChart2,
-  Activity,
-  Power,
-  Gauge
+  BarChart2
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
 import { ref, onValue } from 'firebase/database';
@@ -40,10 +37,7 @@ function App() {
     temperature: 0,
     humidity: 0,
     light: 0,
-    occupancy: 0,
-    current: 0,
-    voltage: 0,
-    power: 0
+    occupancy: 0
   });
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
@@ -65,10 +59,7 @@ function App() {
           temperature: data.temperature ?? 0,
           humidity: data.humidity ?? 0,
           light: data.lux ?? 0,                  // Maps 'lux' to 'light'
-          occupancy: data.ultrasonic_occupancy ?? 0, // Maps 'ultrasonic_occupancy' to 'occupancy'
-          current: data.current ?? 0,
-          voltage: data.voltage ?? 0,
-          power: data.power ?? 0
+          occupancy: data.ultrasonic_occupancy ?? 0 // Maps 'ultrasonic_occupancy' to 'occupancy'
         });
       } else {
         console.warn("Sensor data not found in Firebase. Please create data at the 'sensors/current' path.");
@@ -339,27 +330,6 @@ function App() {
                 unit="people" 
                 icon={Users} 
                 color="var(--color-occupancy)"
-              />
-              <SensorCard 
-                title="Current" 
-                value={currentValues.current} 
-                unit="A" 
-                icon={Activity} 
-                color="#f59e0b"
-              />
-              <SensorCard 
-                title="Voltage" 
-                value={currentValues.voltage} 
-                unit="V" 
-                icon={Gauge} 
-                color="#8b5cf6"
-              />
-              <SensorCard 
-                title="Power" 
-                value={currentValues.power} 
-                unit="W" 
-                icon={Power} 
-                color="#ec4899"
               />
             </div>
 
