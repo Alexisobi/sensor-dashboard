@@ -14,7 +14,7 @@ import {
   BarChart2
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
-import { collection, onSnapshot, query, orderBy, limit, doc } from 'firebase/firestore';
+import { ref, onValue } from 'firebase/database';
 import { db } from './firebase'; // Import the db instance
 
 import SensorCard from './components/SensorCard';
@@ -31,29 +31,45 @@ function App() {
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   
-  // Real-time current values (start with sensible baseline for presentation)
+  // Real-time current values initialized to 0
   const [currentValues, setCurrentValues] = useState({
-    energy: 12.4,
-    temperature: 22.1,
-    humidity: 45.2,
-    light: 450,
-    occupancy: 12
+    energy: 0,
+    temperature: 0,
+    humidity: 0,
+    light: 0,
+    occupancy: 0
   });
 
-  // 1. Simulate Real-time Current Sensor Values (For Presentation)
+  // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
-    // This perfectly mimics a live websocket/firebase stream updating every 3 seconds
-    const intervalId = setInterval(() => {
-      setCurrentValues(prev => ({
-        energy: Number((12 + (Math.random() * 2 - 1)).toFixed(1)),
-        temperature: Number((22 + (Math.random() * 0.8 - 0.4)).toFixed(1)),
-        humidity: Number((45 + (Math.random() * 2 - 1)).toFixed(1)),
-        light: Math.floor(450 + (Math.random() * 50 - 25)),
-        occupancy: Math.max(0, Math.floor(12 + (Math.random() * 4 - 2)))
-      }));
-    }, 3000);
+    // Listen to Firebase 'live_data' path for real-time updates
+    const currentRef = ref(db, 'live_data');
+    
+    // onValue listens for data changes at a particular path
+    console.log("Attempting to connect to Firebase Realtime Database at 'live_data'...");
+    
+    const unsubscribe = onValue(currentRef, (snapshot) => {
+      const data = snapshot.val();
+      console.log("🔥 Firebase Data Received:", data);
+      
+      if (data) {
+        // Map the custom database values to what our dashboard expects
+        setCurrentValues({
+          energy: data.energy ?? 0,
+          temperature: data.temperature ?? 0,
+          humidity: data.humidity ?? 0,
+          light: data.lux ?? 0,                  // Maps 'lux' to 'light'
+          occupancy: data.ultrasonic_occupancy ?? 0 // Maps 'ultrasonic_occupancy' to 'occupancy'
+        });
+      } else {
+        console.warn("Sensor data not found in Firebase. Please create data at the 'sensors/current' path.");
+      }
+    }, (error) => {
+      console.error("Error fetching real-time data from Realtime Database:", error);
+    });
 
-    return () => clearInterval(intervalId);
+    // onValue returns an unsubscribe callback
+    return () => unsubscribe();
   }, []);
 
   // 2. Fetch Historical Data for Charts (For Presentation)
