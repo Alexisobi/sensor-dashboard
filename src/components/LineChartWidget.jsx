@@ -28,7 +28,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const LineChartWidget = ({ title, data, dataKeys, colors }) => {
+const LineChartWidget = ({ title, data, dataKeys, colors, yAxisDomain, yAxisTicks, showDots }) => {
   return (
     <div className="glass-card chart-widget">
       <h3 className="chart-title">{title}</h3>
@@ -55,6 +55,8 @@ const LineChartWidget = ({ title, data, dataKeys, colors }) => {
               axisLine={false}
             />
             <YAxis 
+              domain={yAxisDomain || ['auto', 'auto']}
+              ticks={yAxisTicks}
               stroke="var(--text-secondary)" 
               fontSize={12} 
               tickLine={false}
@@ -71,6 +73,8 @@ const LineChartWidget = ({ title, data, dataKeys, colors }) => {
                 fillOpacity={1}
                 fill={`url(#color${key})`}
                 animationDuration={1000}
+                dot={showDots ? { fill: colors[index], r: 4, strokeWidth: 0 } : false}
+                activeDot={{ r: 6, strokeWidth: 0 }}
               />
             ))}
           </AreaChart>

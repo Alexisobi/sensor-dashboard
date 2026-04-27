@@ -222,7 +222,8 @@ function App() {
         humidity: baseHum + (Math.random() * 10 - 5),
         energy: baseEnergy + (Math.random() * 5 - 2),
         light: Math.floor(Math.random() * 500 + 300),
-        occupancy: Math.max(0, Math.floor(12 + (Math.random() * 8 - 4)))
+        occupancy: Math.max(0, Math.floor(12 + (Math.random() * 8 - 4))),
+        soc: Math.floor(Math.random() * 40 + 60) // Random typical SOC values between 60% and 100%
       });
     }
     return data;
@@ -430,9 +431,12 @@ function App() {
               <div style={{ width: '100%' }}>
                 <LineChartWidget 
                   title="Historical State of Charge"
-                  data={socTrendData}
-                  dataKeys={['value']}
+                  data={chartData}
+                  dataKeys={['soc']}
                   colors={['#3b82f6']}
+                  yAxisDomain={[0, 100]}
+                  yAxisTicks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                  showDots={true}
                 />
               </div>
             </div>
