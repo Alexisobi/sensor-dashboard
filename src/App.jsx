@@ -25,7 +25,6 @@ import SensorCard from './components/SensorCard';
 import LineChartWidget from './components/LineChartWidget';
 import Login from './components/Login';
 import BatteryGauge from './components/BatteryGauge';
-import SocTrend from './components/SocTrend';
 import './App.css';
 
 function App() {
@@ -429,7 +428,12 @@ function App() {
                 <BatteryGauge soc={inverterData.battery_soc} />
               </div>
               <div style={{ width: '100%' }}>
-                <SocTrend dataPoints={socTrendData} />
+                <LineChartWidget 
+                  title="Historical State of Charge"
+                  data={socTrendData}
+                  dataKeys={['value']}
+                  colors={['#3b82f6']}
+                />
               </div>
             </div>
           </>
