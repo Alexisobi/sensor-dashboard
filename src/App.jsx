@@ -18,7 +18,7 @@ import {
   Radar
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
-import { ref, onValue, push, set } from 'firebase/database';
+import { ref, onValue, push, set, query, orderByChild, limitToLast } from 'firebase/database';
 import { db } from './firebase'; // Import the db instance
 
 import SensorCard from './components/SensorCard';
@@ -156,11 +156,26 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Historical Data for Charts (For Presentation)
+  // 2. Fetch Historical Data for SOC Chart (Live from Firebase)
   useEffect(() => {
-    // Use the same mock generator we built for reports to populate the dashboard charts instantly
-    // In the future, uncomment the Firebase logic here
-    setChartData(generateMockData('hourly'));
+    // Query the last 24 rolling logs mapped by timestamp
+    const rawLogsQuery = query(ref(db, 'inverter/raw_logs'), orderByChild('timestamp'), limitToLast(24));
+    
+    const unsubscribe = onValue(rawLogsQuery, (snapshot) => {
+      if (snapshot.exists()) {
+        const logs = [];
+        snapshot.forEach((child) => {
+          const val = child.val();
+          logs.push({
+            time: format(new Date(val.timestamp), 'HH:mm:ss'), // Format to localized time
+            soc: val.battery_soc || 0
+          });
+        });
+        setChartData(logs); // Update the chart dataset dynamically!
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Timer for the clock in the header
