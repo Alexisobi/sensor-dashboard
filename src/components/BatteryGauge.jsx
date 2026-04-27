@@ -139,9 +139,9 @@ const BatteryGauge = ({ soc }) => {
     layout: {
       padding: {
         top: 20,
-        left: 30,
-        right: 30,
-        bottom: 10
+        left: 50,
+        right: 50,
+        bottom: 15
       }
     },
     plugins: {
