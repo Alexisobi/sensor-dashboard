@@ -18,7 +18,7 @@ import {
   Radar
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
-import { ref, onValue, push, set, query, orderByChild, limitToLast } from 'firebase/database';
+import { ref, onValue, push, set, query, orderByChild, limitToLast, update } from 'firebase/database';
 import { db } from './firebase'; // Import the db instance
 
 import SensorCard from './components/SensorCard';
@@ -76,6 +76,15 @@ function App() {
       };
 
       set(newLogRef, mockLog).catch(err => console.error("Error pumping fake log:", err));
+
+      // Mirror the live values to the main 'inverter' path so the battery gauge and cards update natively
+      const liveInverterRef = ref(db, 'inverter');
+      update(liveInverterRef, {
+        battery_soc: mockLog.battery_soc,
+        current_amps: mockLog.current_amps,
+        last_seen: mockLog.timestamp
+      }).catch(err => console.error("Error updating live inverter data:", err));
+
     }, 5000); // Push every 5 seconds
 
     return () => clearInterval(logInterval);
