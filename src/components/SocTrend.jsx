@@ -1,98 +1,79 @@
 import React from 'react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from 'recharts';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ padding: '8px 12px', background: 'rgba(15, 23, 42, 0.9)', border: '1px solid var(--border-color)', borderRadius: '8px', backdropFilter: 'blur(8px)' }}>
+        <p style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{`${label}`}</p>
+        {payload.map((entry, index) => (
+          <p key={index} style={{ color: entry.color, margin: 0, fontWeight: 600 }}>
+            {`SOC: ${Math.round(entry.value)}%`}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const SocTrend = ({ dataPoints }) => {
-  // dataPoints is expected to be an array of objects: { time: string, value: number }
-
-  const data = {
-    labels: dataPoints.map(p => p.time),
-    datasets: [
-      {
-        label: 'State of Charge (%)',
-        data: dataPoints.map(p => p.value),
-        borderColor: '#3b82f6', // Blue curve
-        backgroundColor: 'rgba(59, 130, 246, 0.2)', // Blue transparency
-        tension: 0.4, // Cubic interpolation for smooth curves
-        fill: true,
-        pointRadius: dataPoints.length > 15 ? 0 : 3, // Hide points if too many
-        pointHoverRadius: 6,
-        borderWidth: 2,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.05)',
-        },
-        ticks: {
-          color: '#94a3b8',
-          maxTicksLimit: 6, // Don't crowd the x-axis
-        }
-      },
-      y: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.05)',
-        },
-        ticks: {
-          color: '#94a3b8',
-        },
-        min: 0,
-        max: 100, // SOC is 0-100
-      }
-    },
-    interaction: {
-      mode: 'nearest',
-      axis: 'x',
-      intersect: false,
-    },
-  };
-
   return (
     <div className="w-full h-full min-h-[300px] flex flex-col p-4 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)]">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-white m-0">Historical State of Charge</h3>
-        <span className="text-sm font-medium px-2 py-1 bg-black/30 rounded-md text-[#3b82f6]">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-medium text-white m-0 tracking-wide">Historical State of Charge</h3>
+        <span className="text-sm font-medium px-3 py-1 bg-black/40 border border-[#3b82f6]/30 rounded-lg text-[#3b82f6] shadow-[0_0_10px_rgba(59,130,246,0.2)]">
           {dataPoints.length > 0 ? Math.round(dataPoints[dataPoints.length - 1].value) + '%' : '0%'}
         </span>
       </div>
       <div className="relative flex-1 w-full min-h-[250px]">
-        <Line data={data} options={options} />
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={dataPoints}
+            margin={{ top: 5, right: 5, left: -25, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="colorSoc" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis 
+              dataKey="time" 
+              stroke="#94a3b8" 
+              fontSize={11} 
+              tickLine={false}
+              axisLine={false}
+              minTickGap={15}
+            />
+            <YAxis 
+              domain={[0, 100]}
+              stroke="#94a3b8" 
+              fontSize={11} 
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              fillOpacity={1}
+              fill="url(#colorSoc)"
+              animationDuration={500}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
