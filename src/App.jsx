@@ -60,6 +60,9 @@ function App() {
     battery_voltage: 0
   });
   const [socTrendData, setSocTrendData] = useState([]);
+  
+  // Track exactly when the client last received *any* new data
+  const [lastDataReceivedAt, setLastDataReceivedAt] = useState(Date.now());
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
@@ -110,6 +113,9 @@ function App() {
     const unsubscribe = onValue(inverterRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        // Record the exact time we got the payload
+        setLastDataReceivedAt(Date.now());
+
         setInverterData({
           battery_soc: data.battery_soc ?? 0,
           current_amps: data.current_amps ?? 0,
@@ -230,16 +236,15 @@ function App() {
 
   // Dynamically compute active alerts
   const activeAlerts = [];
-  if (inverterData.last_seen) {
-    const lastSeenMs = inverterData.last_seen.toString().length <= 10 ? inverterData.last_seen * 1000 : inverterData.last_seen;
-    if (currentTime.getTime() - lastSeenMs > 2 * 1000) {
-      activeAlerts.push({
-        id: 'offline',
-        level: 'critical',
-        message: 'System Offline: Sensor data has not been updated in over 2 seconds.',
-        timestamp: new Date(lastSeenMs)
-      });
-    }
+  
+  // Compute difference between current running time and when we last got data
+  if (currentTime.getTime() - lastDataReceivedAt > 2 * 1000) {
+    activeAlerts.push({
+      id: 'offline',
+      level: 'critical',
+      message: 'System Offline: Sensor data has not been updated in over 2 seconds.',
+      timestamp: new Date(lastDataReceivedAt)
+    });
   }
 
   if (!isAuthenticated) {
