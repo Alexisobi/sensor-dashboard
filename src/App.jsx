@@ -24,6 +24,9 @@ import { db } from './firebase'; // Import the db instance
 import SensorCard from './components/SensorCard';
 import LineChartWidget from './components/LineChartWidget';
 import Login from './components/Login';
+import BatteryGauge from './components/BatteryGauge';
+import PowerFlow from './components/PowerFlow';
+import LoadTrend from './components/LoadTrend';
 import './App.css';
 
 function App() {
@@ -47,6 +50,16 @@ function App() {
     power: 0,
     presence: 0
   });
+
+  // Inverter and Power Flow State
+  const [inverterData, setInverterData] = useState({
+    battery_soc: 0,
+    current_amps: 0,
+    load_watts: 0,
+    status: 'Idle',
+    last_seen: null
+  });
+  const [loadTrendData, setLoadTrendData] = useState([]);
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
@@ -87,6 +100,35 @@ function App() {
     });
 
     // onValue returns an unsubscribe callback
+    return () => unsubscribe();
+  }, []);
+
+  // 1b. Real-time Inverter Data from Firebase
+  useEffect(() => {
+    const inverterRef = ref(db, 'inverter');
+    
+    const unsubscribe = onValue(inverterRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setInverterData({
+          battery_soc: data.battery_soc ?? 0,
+          current_amps: data.current_amps ?? 0,
+          load_watts: data.load_watts ?? 0,
+          status: data.status ?? 'Unknown',
+          last_seen: data.last_seen ?? null
+        });
+
+        // Update sliding window for LoadTrend (last 30 readings)
+        setLoadTrendData(prev => {
+          const now = new Date();
+          const timeString = format(now, 'HH:mm:ss');
+          const newPoint = { time: timeString, load: data.load_watts ?? 0 };
+          const newArray = [...prev, newPoint];
+          return newArray.slice(-30); // Keep last 30 items
+        });
+      }
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -380,19 +422,18 @@ function App() {
             </div>
 
             {/* Charts Section */}
-            <div className="charts-grid">
-              <LineChartWidget 
-                title="Temperature & Humidity (24h)"
-                data={chartData}
-                dataKeys={['temperature', 'humidity']}
-                colors={['var(--color-temp)', 'var(--color-humidity)']}
+            <div className="charts-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+              <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-4 flex flex-col justify-center">
+                <BatteryGauge soc={inverterData.battery_soc} />
+              </div>
+              <PowerFlow 
+                currentAmps={inverterData.current_amps}
+                status={inverterData.status}
+                lastSeen={inverterData.last_seen}
               />
-              <LineChartWidget 
-                title="Energy Consumption (kWh)"
-                data={chartData}
-                dataKeys={['energy']}
-                colors={['var(--color-energy)']}
-              />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <LoadTrend dataPoints={loadTrendData} />
+              </div>
             </div>
           </>
         )}
