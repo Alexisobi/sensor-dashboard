@@ -232,11 +232,11 @@ function App() {
   const activeAlerts = [];
   if (inverterData.last_seen) {
     const lastSeenMs = inverterData.last_seen.toString().length <= 10 ? inverterData.last_seen * 1000 : inverterData.last_seen;
-    if (currentTime.getTime() - lastSeenMs > 10 * 60 * 1000) {
+    if (currentTime.getTime() - lastSeenMs > 2 * 1000) {
       activeAlerts.push({
         id: 'offline',
         level: 'critical',
-        message: 'System Offline: Sensor data has not been updated in over 10 minutes.',
+        message: 'System Offline: Sensor data has not been updated in over 2 seconds.',
         timestamp: new Date(lastSeenMs)
       });
     }
