@@ -23,19 +23,17 @@ ChartJS.register(
   Filler
 );
 
-const LoadTrend = ({ dataPoints }) => {
-  // dataPoints is expected to be an array of objects: { time: string, load: number }
-  // We want a sliding window of the last 30 readings, but we handle that state in App.jsx.
-  // Here we just render the points given.
+const SocTrend = ({ dataPoints }) => {
+  // dataPoints is expected to be an array of objects: { time: string, value: number }
 
   const data = {
     labels: dataPoints.map(p => p.time),
     datasets: [
       {
-        label: 'Home Load (Watts)',
-        data: dataPoints.map(p => p.load),
-        borderColor: '#10b981', // Emerald green
-        backgroundColor: 'rgba(16, 185, 129, 0.2)', // Emerald green with transparency
+        label: 'State of Charge (%)',
+        data: dataPoints.map(p => p.value),
+        borderColor: '#3b82f6', // Blue curve
+        backgroundColor: 'rgba(59, 130, 246, 0.2)', // Blue transparency
         tension: 0.4, // Cubic interpolation for smooth curves
         fill: true,
         pointRadius: dataPoints.length > 15 ? 0 : 3, // Hide points if too many
@@ -74,7 +72,8 @@ const LoadTrend = ({ dataPoints }) => {
         ticks: {
           color: '#94a3b8',
         },
-        beginAtZero: true,
+        min: 0,
+        max: 100, // SOC is 0-100
       }
     },
     interaction: {
@@ -87,9 +86,9 @@ const LoadTrend = ({ dataPoints }) => {
   return (
     <div className="w-full h-full min-h-[300px] flex flex-col p-4 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)]">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-white m-0">Historical Load</h3>
-        <span className="text-sm font-medium px-2 py-1 bg-black/30 rounded-md text-[#10b981]">
-          {dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].load.toFixed(0) + ' W' : '0 W'}
+        <h3 className="text-lg font-medium text-white m-0">Historical State of Charge</h3>
+        <span className="text-sm font-medium px-2 py-1 bg-black/30 rounded-md text-[#3b82f6]">
+          {dataPoints.length > 0 ? Math.round(dataPoints[dataPoints.length - 1].value) + '%' : '0%'}
         </span>
       </div>
       <div className="relative flex-1 w-full min-h-[250px]">
@@ -99,4 +98,4 @@ const LoadTrend = ({ dataPoints }) => {
   );
 };
 
-export default LoadTrend;
+export default SocTrend;

@@ -25,7 +25,7 @@ import SensorCard from './components/SensorCard';
 import LineChartWidget from './components/LineChartWidget';
 import Login from './components/Login';
 import BatteryGauge from './components/BatteryGauge';
-import LoadTrend from './components/LoadTrend';
+import SocTrend from './components/SocTrend';
 import './App.css';
 
 function App() {
@@ -59,7 +59,7 @@ function App() {
     last_seen: null,
     battery_voltage: 0
   });
-  const [loadTrendData, setLoadTrendData] = useState([]);
+  const [socTrendData, setSocTrendData] = useState([]);
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
@@ -119,11 +119,11 @@ function App() {
           battery_voltage: data.battery_voltage ?? 0
         });
 
-        // Update sliding window for LoadTrend (last 30 readings)
-        setLoadTrendData(prev => {
+        // Update sliding window for SocTrend (last 30 readings)
+        setSocTrendData(prev => {
           const now = new Date();
           const timeString = format(now, 'HH:mm:ss');
-          const newPoint = { time: timeString, load: data.load_watts ?? 0 };
+          const newPoint = { time: timeString, value: data.battery_soc ?? 0 };
           const newArray = [...prev, newPoint];
           return newArray.slice(-30); // Keep last 30 items
         });
@@ -422,7 +422,7 @@ function App() {
                 <BatteryGauge soc={inverterData.battery_soc} />
               </div>
               <div style={{ width: '100%' }}>
-                <LoadTrend dataPoints={loadTrendData} />
+                <SocTrend dataPoints={socTrendData} />
               </div>
             </div>
           </>
