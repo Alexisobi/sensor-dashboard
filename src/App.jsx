@@ -228,6 +228,20 @@ function App() {
     setReportsData(generateMockData(reportsTimeframe));
   }, [reportsTimeframe]);
 
+  // Dynamically compute active alerts
+  const activeAlerts = [];
+  if (inverterData.last_seen) {
+    const lastSeenMs = inverterData.last_seen.toString().length <= 10 ? inverterData.last_seen * 1000 : inverterData.last_seen;
+    if (currentTime.getTime() - lastSeenMs > 10 * 60 * 1000) {
+      activeAlerts.push({
+        id: 'offline',
+        level: 'critical',
+        message: 'System Offline: Sensor data has not been updated in over 10 minutes.',
+        timestamp: new Date(lastSeenMs)
+      });
+    }
+  }
+
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;
   }
@@ -323,8 +337,8 @@ function App() {
         <div className="sidebar-status" style={{ marginTop: 'auto', padding: '16px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>System Status</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
-            <span style={{ fontSize: '0.9rem', color: 'white' }}>All sensors active</span>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activeAlerts.length > 0 ? '#ef4444' : '#10b981' }}></div>
+            <span style={{ fontSize: '0.9rem', color: 'white' }}>{activeAlerts.length > 0 ? 'Sensor Offline' : 'All sensors active'}</span>
           </div>
         </div>
       </aside>
@@ -340,12 +354,12 @@ function App() {
           </div>
           <div className="header-actions">
             <div className="mobile-sensor-status">
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
-              <span style={{ fontSize: '0.85rem', color: 'white' }}>Status: Active</span>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activeAlerts.length > 0 ? '#ef4444' : '#10b981' }}></div>
+              <span style={{ fontSize: '0.85rem', color: 'white' }}>Status: {activeAlerts.length > 0 ? 'Offline' : 'Active'}</span>
             </div>
-            <button className="alerts-btn" style={{ backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer' }}>
+            <button onClick={() => setActiveTab('alerts')} className="alerts-btn" style={{ backgroundColor: activeAlerts.length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'var(--glass-bg)', border: activeAlerts.length > 0 ? '1px solid #ef4444' : 'var(--glass-border)', color: activeAlerts.length > 0 ? '#ef4444' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer' }}>
               <Bell size={18} />
-              <span style={{ fontSize: '0.9rem' }}>2 Alerts</span>
+              <span style={{ fontSize: '0.9rem' }}>{activeAlerts.length} Alerts</span>
             </button>
           </div>
         </header>
@@ -529,8 +543,29 @@ function App() {
 
         {activeTab === 'alerts' && (
           <div style={{ padding: '2rem', backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', borderRadius: '16px', marginTop: '2rem' }}>
-            <h3 style={{ marginTop: 0 }}>System Alerts</h3>
-            <p style={{ color: 'var(--text-secondary)' }}>Notices, warnings, and error logs will go here.</p>
+            <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>System Alerts</h3>
+            {activeAlerts.length === 0 ? (
+               <div style={{ padding: '1rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981' }}>
+                 No active alerts. All systems are operating normally.
+               </div>
+            ) : (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                 {activeAlerts.map(alert => (
+                   <div key={alert.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', color: '#f8fafc' }}>
+                     <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '50%', display: 'flex' }}>
+                       <Bell size={24} className="text-red-500" />
+                     </div>
+                     <div style={{ display: 'flex', flexDirection: 'column' }}>
+                       <span style={{ fontWeight: 700, color: '#ef4444' }}>{alert.level.toUpperCase()} WARNING</span>
+                       <span style={{ fontSize: '0.95rem', marginTop: '2px' }}>{alert.message}</span>
+                       <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                         Last recorded heartbeat: {format(alert.timestamp, 'MMM do, yyyy HH:mm:ss')}
+                       </span>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+            )}
           </div>
         )}
       </main>
