@@ -18,7 +18,7 @@ import {
   Radar
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, push, set } from 'firebase/database';
 import { db } from './firebase'; // Import the db instance
 
 import SensorCard from './components/SensorCard';
@@ -60,8 +60,26 @@ function App() {
   });
   const [socTrendData, setSocTrendData] = useState([]);
   
-  // Track exactly when the client last received *any* new data
   const [lastDataReceivedAt, setLastDataReceivedAt] = useState(Date.now());
+
+  // 0. EXPERIMENTAL: Mock Data Pumper to keep logs flowing
+  useEffect(() => {
+    if (!isAuthenticated) return; // Only push if logged in
+
+    const logInterval = setInterval(() => {
+      const rawLogsRef = ref(db, 'inverter/raw_logs');
+      const newLogRef = push(rawLogsRef);
+      const mockLog = {
+        battery_soc: Math.floor(Math.random() * 40 + 60), // 60-100%
+        current_amps: parseFloat((Math.random() * 20 - 10).toFixed(2)), // -10A to 10A
+        timestamp: Date.now()
+      };
+
+      set(newLogRef, mockLog).catch(err => console.error("Error pumping fake log:", err));
+    }, 5000); // Push every 5 seconds
+
+    return () => clearInterval(logInterval);
+  }, [isAuthenticated]);
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
