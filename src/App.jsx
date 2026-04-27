@@ -392,27 +392,7 @@ function App() {
                 icon={Users} 
                 color="var(--color-occupancy)"
               />
-              <SensorCard 
-                title="Presence (Radar)" 
-                value={currentValues.presence} 
-                unit={currentValues.presence > 0 ? "Detected" : "Clear"} 
-                icon={Radar} 
-                color={currentValues.presence > 0 ? "#f43f5e" : "#94a3b8"}
-              />
-              <SensorCard 
-                title="Current" 
-                value={currentValues.current} 
-                unit="A" 
-                icon={Activity} 
-                color="#f59e0b"
-              />
-              <SensorCard 
-                title="Voltage" 
-                value={currentValues.voltage} 
-                unit="V" 
-                icon={Gauge} 
-                color="#8b5cf6"
-              />
+
               <SensorCard 
                 title="Power" 
                 value={currentValues.power} 
