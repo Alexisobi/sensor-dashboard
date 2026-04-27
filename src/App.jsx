@@ -284,19 +284,7 @@ function App() {
             <LayoutDashboard size={20} />
             Dashboard
           </div>
-          <div 
-            className={`sidebar-link ${activeTab === 'config' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('config'); setIsMobileMenuOpen(false); }}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
-              borderRadius: '12px', 
-              backgroundColor: activeTab === 'config' ? 'rgba(255,255,255,0.1)' : 'transparent', 
-              color: activeTab === 'config' ? 'white' : 'var(--text-secondary)', 
-              fontWeight: activeTab === 'config' ? 500 : 'normal'
-            }}>
-            <Settings size={20} />
-            Sensors & Config
-          </div>
+
           <div 
             className={`sidebar-link ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => { setActiveTab('reports'); setIsMobileMenuOpen(false); }}
@@ -539,12 +527,7 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'config' && (
-          <div style={{ padding: '2rem', backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', borderRadius: '16px', marginTop: '2rem' }}>
-            <h3 style={{ marginTop: 0 }}>Sensors & Configuration</h3>
-            <p style={{ color: 'var(--text-secondary)' }}>Sensor connection settings and thresholds configuration will go here.</p>
-          </div>
-        )}
+
 
         {activeTab === 'alerts' && (
           <div style={{ padding: '2rem', backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', borderRadius: '16px', marginTop: '2rem' }}>
