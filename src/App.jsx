@@ -25,7 +25,6 @@ import SensorCard from './components/SensorCard';
 import LineChartWidget from './components/LineChartWidget';
 import Login from './components/Login';
 import BatteryGauge from './components/BatteryGauge';
-import PowerFlow from './components/PowerFlow';
 import LoadTrend from './components/LoadTrend';
 import './App.css';
 
@@ -57,7 +56,8 @@ function App() {
     current_amps: 0,
     load_watts: 0,
     status: 'Idle',
-    last_seen: null
+    last_seen: null,
+    battery_voltage: 0
   });
   const [loadTrendData, setLoadTrendData] = useState([]);
 
@@ -115,7 +115,8 @@ function App() {
           current_amps: data.current_amps ?? 0,
           load_watts: data.load_watts ?? 0,
           status: data.status ?? 'Unknown',
-          last_seen: data.last_seen ?? null
+          last_seen: data.last_seen ?? null,
+          battery_voltage: data.battery_voltage ?? 0
         });
 
         // Update sliding window for LoadTrend (last 30 readings)
@@ -419,19 +420,28 @@ function App() {
                 icon={Power} 
                 color="#ec4899"
               />
+              <SensorCard 
+                title="Battery Voltage" 
+                value={inverterData.battery_voltage} 
+                unit="V" 
+                icon={Gauge} 
+                color="#10b981"
+              />
+              <SensorCard 
+                title="Battery Current" 
+                value={inverterData.current_amps} 
+                unit="A" 
+                icon={Activity} 
+                color="#3b82f6"
+              />
             </div>
 
             {/* Charts Section */}
-            <div className="charts-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+            <div className="charts-grid" style={{ gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '1.5rem', marginTop: '1.5rem' }}>
               <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-4 flex flex-col justify-center">
                 <BatteryGauge soc={inverterData.battery_soc} />
               </div>
-              <PowerFlow 
-                currentAmps={inverterData.current_amps}
-                status={inverterData.status}
-                lastSeen={inverterData.last_seen}
-              />
-              <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ width: '100%' }}>
                 <LoadTrend dataPoints={loadTrendData} />
               </div>
             </div>
