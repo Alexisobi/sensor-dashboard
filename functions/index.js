@@ -37,7 +37,7 @@ function computeAverage(dataArray) {
 exports.aggregateHourly = onSchedule("0 * * * *", async (event) => {
   const db = getDatabase();
   const firestore = getFirestore();
-  const rawLogsRef = db.ref("inverter/raw_logs");
+  const rawLogsRef = db.ref("telemetry/logs");
   
   const snapshot = await rawLogsRef.once("value");
   const data = snapshot.val();

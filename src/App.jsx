@@ -65,57 +65,34 @@ function App() {
 
   // Removed EXPERIMENTAL Mock Data Pumper since hardware handles real data pushing
 
-  // 1. Real-time Current Sensor Values from Firebase Realtime Database
+  // 1. Real-time Unified Sensor and Inverter Values from telemetry/live
   useEffect(() => {
-    // --- DIAGONSTICS: Track connection state directly ---
     const connectedRef = ref(db, ".info/connected");
     const unsubConnected = onValue(connectedRef, (snap) => {
       console.log("📡 Firebase Connection Status:", snap.val() === true ? "ONLINE 🟢" : "OFFLINE / CONNECTING 🔴");
     });
 
-    // Listen to Firebase 'live_data' path for real-time updates
-    const currentRef = ref(db, 'live_data');
+    const liveRef = ref(db, 'telemetry/live');
     
-    // onValue listens for data changes at a particular path
-    console.log("Attempting to connect to Firebase Realtime Database at 'live_data'...");
+    console.log("Attempting to connect to Firebase Realtime Database at 'telemetry/live'...");
     
-    const unsubscribe = onValue(currentRef, (snapshot) => {
+    const unsubscribe = onValue(liveRef, (snapshot) => {
       const data = snapshot.val();
-      console.log("🔥 Firebase Data Received:", data);
       
       if (data) {
-        // Map the custom database values to what our dashboard expects
+        setLastDataReceivedAt(Date.now());
+        
         setCurrentValues({
           energy: data.energy ?? 0,
           temperature: data.temperature ?? 0,
           humidity: data.humidity ?? 0,
-          light: data.lux ?? 0,                  // Maps 'lux' to 'light'
-          occupancy: data.ultrasonic_occupancy ?? 0, // Maps 'ultrasonic_occupancy' to 'occupancy'
+          light: data.lux ?? data.light ?? 0,                  
+          occupancy: data.ultrasonic_occupancy ?? data.occupancy ?? 0, 
           current: data.current ?? 0,
           voltage: data.voltage ?? 0,
           power: data.power ?? 0,
-          presence: data.radar_motion ?? 0
+          presence: data.radar_motion ?? data.presence ?? 0
         });
-      } else {
-        console.warn("Sensor data not found in Firebase. Please create data at the 'sensors/current' path.");
-      }
-    }, (error) => {
-      console.error("Error fetching real-time data from Realtime Database:", error);
-    });
-
-    // onValue returns an unsubscribe callback
-    return () => unsubscribe();
-  }, []);
-
-  // 1b. Real-time Inverter Data from Firebase
-  useEffect(() => {
-    const inverterRef = ref(db, 'inverter');
-    
-    const unsubscribe = onValue(inverterRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Record the exact time we got the payload
-        setLastDataReceivedAt(Date.now());
 
         setInverterData({
           battery_soc: data.battery_soc ?? 0,
@@ -126,15 +103,18 @@ function App() {
           battery_voltage: data.battery_voltage ?? 0
         });
 
-        // Update sliding window for SocTrend (last 30 readings)
         setSocTrendData(prev => {
           const now = new Date();
           const timeString = format(now, 'HH:mm:ss');
           const newPoint = { time: timeString, value: data.battery_soc ?? 0 };
           const newArray = [...prev, newPoint];
-          return newArray.slice(-30); // Keep last 30 items
+          return newArray.slice(-30);
         });
+      } else {
+        console.warn("Data not found at 'telemetry/live'.");
       }
+    }, (error) => {
+      console.error("Error fetching real-time data:", error);
     });
 
     return () => unsubscribe();
@@ -143,7 +123,7 @@ function App() {
   // 2. Fetch Historical Data for SOC Chart (Live from Firebase)
   useEffect(() => {
     // Query the last 24 rolling logs mapped by timestamp
-    const rawLogsQuery = rtdbQuery(ref(db, 'inverter/raw_logs'), orderByChild('timestamp'), limitToLast(24));
+    const rawLogsQuery = rtdbQuery(ref(db, 'telemetry/logs'), orderByChild('timestamp'), limitToLast(24));
     
     const unsubscribe = onValue(rawLogsQuery, (snapshot) => {
       if (snapshot.exists()) {
