@@ -1,32 +1,169 @@
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { getDatabase } = require("firebase-admin/database");
+const { getFirestore } = require("firebase-admin/firestore");
+const admin = require("firebase-admin");
+
+admin.initializeApp();
+
 /**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ * Helper to compute averages from an array of objects
  */
+function computeAverage(dataArray) {
+  if (!dataArray || dataArray.length === 0) return {};
+  
+  const sums = {};
+  const counts = {};
+  
+  for (const item of dataArray) {
+    for (const [key, value] of Object.entries(item)) {
+      if (typeof value === 'number' && key !== 'timestamp' && key !== 'last_seen') {
+        sums[key] = (sums[key] || 0) + value;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+  }
+  
+  const averages = {};
+  for (const key in sums) {
+    averages[key] = Number((sums[key] / counts[key]).toFixed(2));
+  }
+  return averages;
+}
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+/**
+ * 1. Hourly Aggregation
+ * Runs at minute 0 past every hour.
+ */
+exports.aggregateHourly = onSchedule("0 * * * *", async (event) => {
+  const db = getDatabase();
+  const firestore = getFirestore();
+  const rawLogsRef = db.ref("inverter/raw_logs");
+  
+  const snapshot = await rawLogsRef.once("value");
+  const data = snapshot.val();
+  
+  if (!data) {
+    console.log("No raw logs to aggregate.");
+    return;
+  }
+  
+  const logs = [];
+  const keysToDelete = [];
+  
+  for (const [key, value] of Object.entries(data)) {
+    logs.push(value);
+    keysToDelete.push(key);
+  }
+  
+  const averages = computeAverage(logs);
+  const timestamp = Date.now();
+  
+  if (Object.keys(averages).length > 0) {
+    await firestore.collection("reports_hourly").add({
+      ...averages,
+      timestamp: timestamp,
+      timeString: new Date(timestamp).toISOString(),
+      logCount: logs.length
+    });
+    console.log(`Saved hourly average from ${logs.length} logs.`);
+    
+    // Delete processed logs from RTDB to prevent lag
+    const updates = {};
+    for (const key of keysToDelete) {
+      updates[key] = null;
+    }
+    await rawLogsRef.update(updates);
+    console.log("Cleared processed logs from RTDB.");
+  }
+});
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+/**
+ * 2. Daily Aggregation
+ * Runs at 00:00 every day.
+ */
+exports.aggregateDaily = onSchedule("0 0 * * *", async (event) => {
+  const firestore = getFirestore();
+  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+  
+  const snapshot = await firestore.collection("reports_hourly")
+    .where("timestamp", ">=", oneDayAgo)
+    .get();
+    
+  if (snapshot.empty) return;
+  
+  const logs = [];
+  snapshot.forEach(doc => logs.push(doc.data()));
+  
+  const averages = computeAverage(logs);
+  const timestamp = Date.now();
+  
+  if (Object.keys(averages).length > 0) {
+    await firestore.collection("reports_daily").add({
+      ...averages,
+      timestamp: timestamp,
+      timeString: new Date(timestamp).toISOString(),
+      logCount: logs.length
+    });
+    console.log(`Saved daily average from ${logs.length} hourly logs.`);
+  }
+});
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+/**
+ * 3. Weekly Aggregation
+ * Runs at 00:00 on Sunday.
+ */
+exports.aggregateWeekly = onSchedule("0 0 * * 0", async (event) => {
+  const firestore = getFirestore();
+  const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  
+  const snapshot = await firestore.collection("reports_daily")
+    .where("timestamp", ">=", oneWeekAgo)
+    .get();
+    
+  if (snapshot.empty) return;
+  
+  const logs = [];
+  snapshot.forEach(doc => logs.push(doc.data()));
+  
+  const averages = computeAverage(logs);
+  const timestamp = Date.now();
+  
+  if (Object.keys(averages).length > 0) {
+    await firestore.collection("reports_weekly").add({
+      ...averages,
+      timestamp: timestamp,
+      timeString: new Date(timestamp).toISOString(),
+      logCount: logs.length
+    });
+  }
+});
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+/**
+ * 4. Monthly Aggregation
+ * Runs at 00:00 on day-of-month 1.
+ */
+exports.aggregateMonthly = onSchedule("0 0 1 * *", async (event) => {
+  const firestore = getFirestore();
+  const oneMonthAgo = Date.now() - (30 * 24 * 60 * 60 * 1000); // Approx 30 days
+  
+  const snapshot = await firestore.collection("reports_daily")
+    .where("timestamp", ">=", oneMonthAgo)
+    .get();
+    
+  if (snapshot.empty) return;
+  
+  const logs = [];
+  snapshot.forEach(doc => logs.push(doc.data()));
+  
+  const averages = computeAverage(logs);
+  const timestamp = Date.now();
+  
+  if (Object.keys(averages).length > 0) {
+    await firestore.collection("reports_monthly").add({
+      ...averages,
+      timestamp: timestamp,
+      timeString: new Date(timestamp).toISOString(),
+      logCount: logs.length
+    });
+  }
+});

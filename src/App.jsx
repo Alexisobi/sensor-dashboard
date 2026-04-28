@@ -18,8 +18,9 @@ import {
   Radar
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
-import { ref, onValue, push, set, query, orderByChild, limitToLast, update } from 'firebase/database';
-import { db } from './firebase'; // Import the db instance
+import { ref, onValue, push, set, query as rtdbQuery, orderByChild, limitToLast, update } from 'firebase/database';
+import { collection, query as fsQuery, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db, firestoreDb } from './firebase'; // Import both db and firestoreDb
 
 import SensorCard from './components/SensorCard';
 import LineChartWidget from './components/LineChartWidget';
@@ -62,33 +63,7 @@ function App() {
   
   const [lastDataReceivedAt, setLastDataReceivedAt] = useState(Date.now());
 
-  // 0. EXPERIMENTAL: Mock Data Pumper to keep logs flowing
-  useEffect(() => {
-    if (!isAuthenticated) return; // Only push if logged in
-
-    const logInterval = setInterval(() => {
-      const rawLogsRef = ref(db, 'inverter/raw_logs');
-      const newLogRef = push(rawLogsRef);
-      const mockLog = {
-        battery_soc: Math.floor(Math.random() * 40 + 60), // 60-100%
-        current_amps: parseFloat((Math.random() * 20 - 10).toFixed(2)), // -10A to 10A
-        timestamp: Date.now()
-      };
-
-      set(newLogRef, mockLog).catch(err => console.error("Error pumping fake log:", err));
-
-      // Mirror the live values to the main 'inverter' path so the battery gauge and cards update natively
-      const liveInverterRef = ref(db, 'inverter');
-      update(liveInverterRef, {
-        battery_soc: mockLog.battery_soc,
-        current_amps: mockLog.current_amps,
-        last_seen: mockLog.timestamp
-      }).catch(err => console.error("Error updating live inverter data:", err));
-
-    }, 5000); // Push every 5 seconds
-
-    return () => clearInterval(logInterval);
-  }, [isAuthenticated]);
+  // Removed EXPERIMENTAL Mock Data Pumper since hardware handles real data pushing
 
   // 1. Real-time Current Sensor Values from Firebase Realtime Database
   useEffect(() => {
@@ -168,7 +143,7 @@ function App() {
   // 2. Fetch Historical Data for SOC Chart (Live from Firebase)
   useEffect(() => {
     // Query the last 24 rolling logs mapped by timestamp
-    const rawLogsQuery = query(ref(db, 'inverter/raw_logs'), orderByChild('timestamp'), limitToLast(24));
+    const rawLogsQuery = rtdbQuery(ref(db, 'inverter/raw_logs'), orderByChild('timestamp'), limitToLast(24));
     
     const unsubscribe = onValue(rawLogsQuery, (snapshot) => {
       if (snapshot.exists()) {
@@ -223,57 +198,64 @@ function App() {
     };
   }, [isAuthenticated]);
 
-  // Generate Mock Data for Reports based on timeframe
-  const generateMockData = (timeframe) => {
-    const data = [];
-    const now = new Date();
-    
-    let points = 24;
-    let timeFormatter = (d) => format(d, 'HH:mm');
-    let subtractor = subHours;
-    let baseTemp = 22;
-    let baseHum = 45;
-    let baseEnergy = 12;
+  // Fetch Historical Reports Data from Firestore based on timeframe
+  useEffect(() => {
+    const collectionMap = {
+      'hourly': 'reports_hourly',
+      'daily': 'reports_daily',
+      'weekly': 'reports_weekly',
+      'monthly': 'reports_monthly'
+    };
 
-    switch(timeframe) {
+    const targetCollection = collectionMap[reportsTimeframe];
+    if (!targetCollection) return;
+
+    let points = 24;
+    let timeFormatter = (timestamp) => format(new Date(timestamp), 'HH:mm');
+
+    switch(reportsTimeframe) {
       case 'daily':
         points = 7;
-        timeFormatter = (d) => format(d, 'EEE'); // Mon, Tue
-        subtractor = subDays;
+        timeFormatter = (timestamp) => format(new Date(timestamp), 'EEE'); // Mon, Tue
         break;
       case 'weekly':
         points = 4;
-        timeFormatter = (d) => `Week ${format(d, 'w')}`;
-        subtractor = subWeeks;
+        timeFormatter = (timestamp) => `Week ${format(new Date(timestamp), 'w')}`;
         break;
       case 'monthly':
         points = 12;
-        timeFormatter = (d) => format(d, 'MMM'); // Jan, Feb
-        subtractor = subMonths;
+        timeFormatter = (timestamp) => format(new Date(timestamp), 'MMM'); // Jan, Feb
         break;
       default: // hourly
         points = 24;
         break;
     }
 
-    for (let i = points - 1; i >= 0; i--) {
-      const date = subtractor(now, i);
-      data.push({
-        time: timeFormatter(date),
-        temperature: baseTemp + (Math.random() * 4 - 2),
-        humidity: baseHum + (Math.random() * 10 - 5),
-        energy: baseEnergy + (Math.random() * 5 - 2),
-        light: Math.floor(Math.random() * 500 + 300),
-        occupancy: Math.max(0, Math.floor(12 + (Math.random() * 8 - 4))),
-        soc: Math.floor(Math.random() * 40 + 60) // Random typical SOC values between 60% and 100%
-      });
-    }
-    return data;
-  };
+    const q = fsQuery(
+      collection(firestoreDb, targetCollection),
+      orderBy('timestamp', 'desc'),
+      limit(points)
+    );
 
-  // Update reports data when timeframe changes
-  useEffect(() => {
-    setReportsData(generateMockData(reportsTimeframe));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = [];
+      snapshot.forEach((doc) => {
+        const val = doc.data();
+        data.push({
+          time: timeFormatter(val.timestamp),
+          temperature: val.temperature || 0,
+          humidity: val.humidity || 0,
+          energy: val.energy || 0,
+          light: val.lux || val.light || 0,
+          occupancy: val.ultrasonic_occupancy || val.occupancy || 0,
+          soc: val.battery_soc || val.soc || 0
+        });
+      });
+      // Data is ordered desc, so newest is first. Reverse to chart chronologically (left to right).
+      setReportsData(data.reverse());
+    });
+
+    return () => unsubscribe();
   }, [reportsTimeframe]);
 
   // Dynamically compute active alerts

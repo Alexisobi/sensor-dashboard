@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
+import { getFirestore } from 'firebase/firestore';
 
 // TODO: Replace these with your actual Firebase project configuration
 // You can find these in your Firebase Console -> Project Settings -> General -> Your apps
@@ -18,3 +19,6 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Realtime Database and get a reference to the service
 export const db = getDatabase(app);
+
+// Initialize Cloud Firestore and get a reference to the service
+export const firestoreDb = getFirestore(app);
