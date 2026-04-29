@@ -120,23 +120,25 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Historical Data for SOC Chart (Live from Firebase)
+  // 2. Fetch Historical Data for SOC Chart (Live from Firestore)
   useEffect(() => {
-    // Query the last 24 rolling logs mapped by timestamp
-    const rawLogsQuery = rtdbQuery(ref(db, 'telemetry/logs'), orderByChild('timestamp'), limitToLast(24));
-    
-    const unsubscribe = onValue(rawLogsQuery, (snapshot) => {
-      if (snapshot.exists()) {
-        const logs = [];
-        snapshot.forEach((child) => {
-          const val = child.val();
-          logs.push({
-            time: format(new Date(val.timestamp), 'HH:mm:ss'), // Format to localized time
-            soc: val.battery_soc || 0
-          });
+    const q = fsQuery(
+      collection(firestoreDb, 'reports_hourly'),
+      orderBy('timestamp', 'desc'),
+      limit(24)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logs = [];
+      snapshot.forEach((doc) => {
+        const val = doc.data();
+        logs.push({
+          time: format(new Date(val.timestamp), 'HH:mm'), // Format to hour/min
+          soc: val.battery_soc || 0
         });
-        setChartData(logs); // Update the chart dataset dynamically!
-      }
+      });
+      // Data is ordered desc, so newest is first. Reverse to chart chronologically.
+      setChartData(logs.reverse());
     });
 
     return () => unsubscribe();
