@@ -31,10 +31,10 @@ function computeAverage(dataArray) {
 }
 
 /**
- * 1. Hourly Aggregation
- * Runs at minute 0 past every hour.
+ * 1. Ten-Minute Aggregation
+ * Runs every 10 minutes.
  */
-exports.aggregateHourly = onSchedule("0 * * * *", async (event) => {
+exports.aggregateTenMinute = onSchedule("*/10 * * * *", async (event) => {
   const db = getDatabase();
   const firestore = getFirestore();
   const rawLogsRef = db.ref("telemetry/logs");
@@ -59,13 +59,13 @@ exports.aggregateHourly = onSchedule("0 * * * *", async (event) => {
   const timestamp = Date.now();
   
   if (Object.keys(averages).length > 0) {
-    await firestore.collection("reports_hourly").add({
+    await firestore.collection("reports_ten_minute").add({
       ...averages,
       timestamp: timestamp,
       timeString: new Date(timestamp).toISOString(),
       logCount: logs.length
     });
-    console.log(`Saved hourly average from ${logs.length} logs.`);
+    console.log(`Saved ten-minute average from ${logs.length} logs.`);
     
     // Delete processed logs from RTDB to prevent lag
     const updates = {};
@@ -74,6 +74,37 @@ exports.aggregateHourly = onSchedule("0 * * * *", async (event) => {
     }
     await rawLogsRef.update(updates);
     console.log("Cleared processed logs from RTDB.");
+  }
+});
+
+/**
+ * 2. Hourly Aggregation
+ * Runs at minute 0 past every hour.
+ */
+exports.aggregateHourly = onSchedule("0 * * * *", async (event) => {
+  const firestore = getFirestore();
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  
+  const snapshot = await firestore.collection("reports_ten_minute")
+    .where("timestamp", ">=", oneHourAgo)
+    .get();
+    
+  if (snapshot.empty) return;
+  
+  const logs = [];
+  snapshot.forEach(doc => logs.push(doc.data()));
+  
+  const averages = computeAverage(logs);
+  const timestamp = Date.now();
+  
+  if (Object.keys(averages).length > 0) {
+    await firestore.collection("reports_hourly").add({
+      ...averages,
+      timestamp: timestamp,
+      timeString: new Date(timestamp).toISOString(),
+      logCount: logs.length
+    });
+    console.log(`Saved hourly average from ${logs.length} ten-minute logs.`);
   }
 });
 

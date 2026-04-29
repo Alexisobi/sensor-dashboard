@@ -129,9 +129,9 @@ function App() {
   // 2. Fetch Historical Data for SOC Chart (Live from Firestore)
   useEffect(() => {
     const q = fsQuery(
-      collection(firestoreDb, 'reports_hourly'),
+      collection(firestoreDb, 'reports_ten_minute'),
       orderBy('timestamp', 'desc'),
-      limit(24)
+      limit(144)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -189,10 +189,10 @@ function App() {
   // Fetch Historical Reports Data from Firestore based on timeframe
   useEffect(() => {
     const collectionMap = {
-      'hourly': 'reports_hourly',
-      'daily': 'reports_daily',
-      'weekly': 'reports_weekly',
-      'monthly': 'reports_monthly'
+      'hourly': 'reports_ten_minute',
+      'daily': 'reports_hourly',
+      'weekly': 'reports_daily',
+      'monthly': 'reports_daily'
     };
 
     const targetCollection = collectionMap[reportsTimeframe];
@@ -203,19 +203,20 @@ function App() {
 
     switch(reportsTimeframe) {
       case 'daily':
-        points = 7;
-        timeFormatter = (timestamp) => format(new Date(timestamp), 'EEE'); // Mon, Tue
+        points = 168; // 24 hours * 7 days
+        timeFormatter = (timestamp) => format(new Date(timestamp), 'EEE HH:mm'); // Mon 14:00
         break;
       case 'weekly':
-        points = 4;
-        timeFormatter = (timestamp) => `Week ${format(new Date(timestamp), 'w')}`;
+        points = 28; // 7 days * 4 weeks
+        timeFormatter = (timestamp) => format(new Date(timestamp), 'MMM d'); // Oct 12
         break;
       case 'monthly':
-        points = 12;
-        timeFormatter = (timestamp) => format(new Date(timestamp), 'MMM'); // Jan, Feb
+        points = 365; // 365 days
+        timeFormatter = (timestamp) => format(new Date(timestamp), 'MMM d'); // Jan 5
         break;
       default: // hourly
-        points = 24;
+        points = 144; // 6 points per hour * 24 hours
+        timeFormatter = (timestamp) => format(new Date(timestamp), 'HH:mm'); // 14:30
         break;
     }
 
@@ -250,12 +251,12 @@ function App() {
     try {
       setIsDownloading(true);
       const collectionMap = {
-        'hourly': 'reports_hourly',
-        'daily': 'reports_daily',
-        'weekly': 'reports_weekly',
-        'monthly': 'reports_monthly'
+        'hourly': 'reports_ten_minute',
+        'daily': 'reports_hourly',
+        'weekly': 'reports_daily',
+        'monthly': 'reports_daily'
       };
-      const targetCollection = collectionMap[reportsTimeframe] || 'reports_hourly';
+      const targetCollection = collectionMap[reportsTimeframe] || 'reports_ten_minute';
 
       const startDate = new Date(downloadStart);
       const endDate = new Date(downloadEnd);
