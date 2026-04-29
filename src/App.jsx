@@ -15,11 +15,12 @@ import {
   Activity,
   Power,
   Gauge,
-  Radar
+  Radar,
+  Download
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
 import { ref, onValue, push, set, query as rtdbQuery, orderByChild, limitToLast, update } from 'firebase/database';
-import { collection, query as fsQuery, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query as fsQuery, orderBy, limit, onSnapshot, getDocs, where } from 'firebase/firestore';
 import { db, firestoreDb } from './firebase'; // Import both db and firestoreDb
 
 import SensorCard from './components/SensorCard';
@@ -37,6 +38,11 @@ function App() {
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   
+  // CSV Download State
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadStart, setDownloadStart] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [downloadEnd, setDownloadEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [isDownloading, setIsDownloading] = useState(false);
   // Real-time current values initialized to 0
   const [currentValues, setCurrentValues] = useState({
     energy: 0,
@@ -239,6 +245,72 @@ function App() {
 
     return () => unsubscribe();
   }, [reportsTimeframe]);
+
+  const handleDownloadData = async () => {
+    try {
+      setIsDownloading(true);
+      const collectionMap = {
+        'hourly': 'reports_hourly',
+        'daily': 'reports_daily',
+        'weekly': 'reports_weekly',
+        'monthly': 'reports_monthly'
+      };
+      const targetCollection = collectionMap[reportsTimeframe] || 'reports_hourly';
+
+      const startDate = new Date(downloadStart);
+      const endDate = new Date(downloadEnd);
+      // set to start/end of the day respectively
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+
+      const q = fsQuery(
+        collection(firestoreDb, targetCollection),
+        where('timestamp', '>=', startDate.getTime()),
+        where('timestamp', '<=', endDate.getTime()),
+        orderBy('timestamp', 'asc') // chronological
+      );
+
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        alert("No data found for this date range.");
+        setIsDownloading(false);
+        return;
+      }
+
+      // Generate CSV
+      let csvContent = "Time,Temperature(C),Humidity(%),Energy(kWh),Light(lux),Occupancy,SOC(%)\n";
+      
+      snapshot.forEach(doc => {
+        const val = doc.data();
+        const dateStr = format(new Date(val.timestamp), 'yyyy-MM-dd HH:mm:ss');
+        const temp = val.temperature || 0;
+        const hum = val.humidity || 0;
+        const nrg = val.energy || 0;
+        const lux = val.lux || val.light || 0;
+        const occ = val.ultrasonic_occupancy || val.occupancy || 0;
+        const soc = val.battery_soc || val.soc || 0;
+        
+        csvContent += `${dateStr},${temp},${hum},${nrg},${lux},${occ},${soc}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `sensodash_${reportsTimeframe}_${downloadStart}_to_${downloadEnd}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setShowDownloadModal(false);
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      alert("Failed to download data. See console for details.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Dynamically compute active alerts
   const activeAlerts = [];
@@ -452,7 +524,16 @@ function App() {
         {activeTab === 'reports' && (
           <div className="reports-section">
             <div className="reports-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.5rem' }}>Historical Analytics</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.5rem' }}>Historical Analytics</h3>
+                <button 
+                  onClick={() => setShowDownloadModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}
+                >
+                  <Download size={16} />
+                  Export CSV
+                </button>
+              </div>
               
               <div className="timeframe-selector" style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '12px', border: 'var(--glass-border)' }}>
                 {['hourly', 'daily', 'weekly', 'monthly'].map((tf) => (
@@ -570,6 +651,56 @@ function App() {
             )}
           </div>
         )}
+
+        {/* Download CSV Modal */}
+        {showDownloadModal && (
+          <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="glass-card" style={{ width: '90%', maxWidth: '400px', padding: '24px', position: 'relative' }}>
+              <button 
+                onClick={() => setShowDownloadModal(false)}
+                style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={24} />
+              </button>
+              <h3 style={{ marginTop: 0, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Download size={20} /> Download Data
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+                Select a date range to export the <b>{reportsTimeframe}</b> data.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Start Date</label>
+                  <input 
+                    type="date" 
+                    value={downloadStart}
+                    onChange={(e) => setDownloadStart(e.target.value)}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(0,0,0,0.3)', color: 'white', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>End Date</label>
+                  <input 
+                    type="date" 
+                    value={downloadEnd}
+                    onChange={(e) => setDownloadEnd(e.target.value)}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(0,0,0,0.3)', color: 'white', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleDownloadData}
+                disabled={isDownloading}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', fontWeight: 600, cursor: isDownloading ? 'not-allowed' : 'pointer', opacity: isDownloading ? 0.7 : 1 }}
+              >
+                {isDownloading ? 'Generating CSV...' : 'Download Export'}
+              </button>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
