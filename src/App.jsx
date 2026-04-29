@@ -561,11 +561,19 @@ function App() {
             <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Average Temperature</span>
-                <span style={{ fontSize: '2rem', fontWeight: 700 }}>22.4°C</span>
+                <span style={{ fontSize: '2rem', fontWeight: 700 }}>
+                  {reportsData.length > 0 
+                    ? (reportsData.reduce((acc, curr) => acc + curr.temperature, 0) / reportsData.length).toFixed(1) 
+                    : "0.0"}°C
+                </span>
               </div>
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Peak Energy Usage</span>
-                <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--color-energy)' }}>18.2 kWh</span>
+                <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--color-energy)' }}>
+                  {reportsData.length > 0 
+                    ? Math.max(...reportsData.map(d => d.energy)).toFixed(1) 
+                    : "0.0"} kWh
+                </span>
               </div>
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Data Points Logged</span>
