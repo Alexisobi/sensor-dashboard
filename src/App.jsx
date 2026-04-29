@@ -316,11 +316,11 @@ function App() {
   const activeAlerts = [];
   
   // Compute difference between current running time and when we last got data
-  if (currentTime.getTime() - lastDataReceivedAt > 2 * 1000) {
+  if (currentTime.getTime() - lastDataReceivedAt > 6 * 1000) {
     activeAlerts.push({
       id: 'offline',
       level: 'critical',
-      message: 'System Offline: Sensor data has not been updated in over 2 seconds.',
+      message: 'System Offline: Sensor data has not been updated in over 5 seconds.',
       timestamp: new Date(lastDataReceivedAt)
     });
   }
