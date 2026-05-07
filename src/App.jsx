@@ -129,7 +129,7 @@ function App() {
   // 2. Fetch Historical Data for SOC Chart (Live from Firestore)
   useEffect(() => {
     const q = fsQuery(
-      collection(firestoreDb, 'reports_ten_minute'),
+      collection(firestoreDb, 'reports_five_minute'),
       orderBy('timestamp', 'desc'),
       limit(144)
     );
@@ -189,7 +189,7 @@ function App() {
   // Fetch Historical Reports Data from Firestore based on timeframe
   useEffect(() => {
     const collectionMap = {
-      'hourly': 'reports_ten_minute',
+      'hourly': 'reports_five_minute',
       'daily': 'reports_hourly',
       'weekly': 'reports_daily',
       'monthly': 'reports_daily'
@@ -251,12 +251,12 @@ function App() {
     try {
       setIsDownloading(true);
       const collectionMap = {
-        'hourly': 'reports_ten_minute',
+        'hourly': 'reports_five_minute',
         'daily': 'reports_hourly',
         'weekly': 'reports_daily',
         'monthly': 'reports_daily'
       };
-      const targetCollection = collectionMap[reportsTimeframe] || 'reports_ten_minute';
+      const targetCollection = collectionMap[reportsTimeframe] || 'reports_five_minute';
 
       const startDate = new Date(downloadStart);
       const endDate = new Date(downloadEnd);
