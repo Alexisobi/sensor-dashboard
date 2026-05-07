@@ -131,7 +131,7 @@ function App() {
     const q = fsQuery(
       collection(firestoreDb, 'reports_five_minute'),
       orderBy('timestamp', 'desc'),
-      limit(144)
+      limit(288)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -215,7 +215,7 @@ function App() {
         timeFormatter = (timestamp) => format(new Date(timestamp), 'MMM d'); // Jan 5
         break;
       default: // hourly
-        points = 144; // 6 points per hour * 24 hours
+        points = 288; // 12 points per hour * 24 hours
         timeFormatter = (timestamp) => format(new Date(timestamp), 'HH:mm'); // 14:30
         break;
     }
