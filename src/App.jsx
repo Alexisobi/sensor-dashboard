@@ -449,7 +449,6 @@ function App() {
                 unit="kWh" 
                 icon={Zap} 
                 color="var(--color-energy)"
-                trend={{ isPositive: false, value: 2.1 }}
               />
               <SensorCard 
                 title="Temperature" 
@@ -457,7 +456,6 @@ function App() {
                 unit="°C" 
                 icon={Thermometer} 
                 color="var(--color-temp)"
-                trend={{ isPositive: true, value: 0.5 }}
               />
               <SensorCard 
                 title="Humidity" 
@@ -465,7 +463,6 @@ function App() {
                 unit="%" 
                 icon={Droplets} 
                 color="var(--color-humidity)"
-                trend={{ isPositive: false, value: 1.2 }}
               />
               <SensorCard 
                 title="Light Intensity" 
