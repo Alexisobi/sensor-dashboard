@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Zap, 
   Thermometer, 
@@ -38,6 +38,8 @@ function App() {
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   const [latest5MinEnergy, setLatest5MinEnergy] = useState(0);
+  const [liveEnergy, setLiveEnergy] = useState(0);
+  const powerBufferRef = useRef([]);
   
   // CSV Download State
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -89,6 +91,8 @@ function App() {
       if (data) {
         setLastDataReceivedAt(Date.now());
         
+        const currentPower = data.power ?? 0;
+        
         setCurrentValues({
           energy: data.energy ?? 0,
           temperature: data.temperature ?? 0,
@@ -97,9 +101,25 @@ function App() {
           occupancy: data.ultrasonic_occupancy ?? data.occupancy ?? 0, 
           current: data.current ?? 0,
           voltage: data.voltage ?? 0,
-          power: data.power ?? 0,
+          power: currentPower,
           presence: data.radar_motion ?? data.presence ?? 0
         });
+
+        // Rolling 60-second energy calculation
+        const now = Date.now();
+        const buffer = powerBufferRef.current;
+        buffer.push({ power: currentPower, timestamp: now });
+        // Discard readings older than 60 seconds
+        const cutoff = now - 60000;
+        powerBufferRef.current = buffer.filter(r => r.timestamp >= cutoff);
+        
+        if (powerBufferRef.current.length > 1) {
+          const avgPower = powerBufferRef.current.reduce((sum, r) => sum + r.power, 0) / powerBufferRef.current.length;
+          const windowSeconds = (now - powerBufferRef.current[0].timestamp) / 1000;
+          const windowHours = windowSeconds / 3600;
+          const energyKwh = (avgPower * windowHours) / 1000;
+          setLiveEnergy(Number(energyKwh.toFixed(6)));
+        }
 
         setInverterData({
           battery_soc: data.battery_soc ?? 0,
@@ -457,8 +477,8 @@ function App() {
                 color="var(--color-energy)"
               />
               <SensorCard 
-                title="5-Min Energy" 
-                value={latest5MinEnergy} 
+                title="Live Energy (1 min)" 
+                value={liveEnergy} 
                 unit="kWh" 
                 icon={Zap} 
                 color="#8b5cf6"
