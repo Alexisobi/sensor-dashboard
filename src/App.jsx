@@ -287,7 +287,7 @@ function App() {
       }
 
       // Generate CSV
-      let csvContent = "Time,Temperature(C),Humidity(%),Accumulated Energy(kWh),5-Min Energy(kWh),Light(lux),Occupancy,SOC(%),Power(W),Battery Voltage(V),Current(A)\n";
+      let csvContent = "Time,Temperature(C),Humidity(%),Accumulated Energy(kWh),5-Min Energy(kWh),Light(lux),Occupancy,SOC(%),Power(W)\n";
       
       snapshot.forEach(doc => {
         const val = doc.data();
@@ -300,10 +300,8 @@ function App() {
         const occ = val.ultrasonic_occupancy || val.occupancy || 0;
         const soc = val.battery_soc || val.soc || 0;
         const pwr = val.power || val.load_watts || 0;
-        const bvolt = val.battery_voltage || val.voltage || 0;
-        const curr = val.current_amps || val.current || 0;
         
-        csvContent += `${dateStr},${temp},${hum},${nrg},${nrg5m},${lux},${occ},${soc},${pwr},${bvolt},${curr}\n`;
+        csvContent += `${dateStr},${temp},${hum},${nrg},${nrg5m},${lux},${occ},${soc},${pwr}\n`;
       });
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
