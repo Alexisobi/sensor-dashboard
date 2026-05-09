@@ -37,6 +37,7 @@ function App() {
   const [reportsTimeframe, setReportsTimeframe] = useState('hourly'); // 'hourly', 'daily', 'weekly', 'monthly'
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
+  const [latest5MinEnergy, setLatest5MinEnergy] = useState(0);
   
   // CSV Download State
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -136,8 +137,13 @@ function App() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const logs = [];
+      let isFirst = true;
       snapshot.forEach((doc) => {
         const val = doc.data();
+        if (isFirst) {
+           setLatest5MinEnergy(val.energy_5min_kWh || 0);
+           isFirst = false;
+        }
         logs.push({
           time: format(new Date(val.timestamp), 'HH:mm'), // Format to hour/min
           soc: val.battery_soc || 0
@@ -235,6 +241,7 @@ function App() {
           temperature: val.temperature || 0,
           humidity: val.humidity || 0,
           energy: val.energy || 0,
+          energy_5min_kWh: val.energy_5min_kWh || 0,
           light: val.lux || val.light || 0,
           occupancy: val.ultrasonic_occupancy || val.occupancy || 0,
           soc: val.battery_soc || val.soc || 0
@@ -280,7 +287,7 @@ function App() {
       }
 
       // Generate CSV
-      let csvContent = "Time,Temperature(C),Humidity(%),Energy(kWh),Light(lux),Occupancy,SOC(%),Power(W),Battery Voltage(V),Current(A)\n";
+      let csvContent = "Time,Temperature(C),Humidity(%),Accumulated Energy(kWh),5-Min Energy(kWh),Light(lux),Occupancy,SOC(%),Power(W),Battery Voltage(V),Current(A)\n";
       
       snapshot.forEach(doc => {
         const val = doc.data();
@@ -288,6 +295,7 @@ function App() {
         const temp = val.temperature || 0;
         const hum = val.humidity || 0;
         const nrg = val.energy || 0;
+        const nrg5m = val.energy_5min_kWh || 0;
         const lux = val.lux || val.light || 0;
         const occ = val.ultrasonic_occupancy || val.occupancy || 0;
         const soc = val.battery_soc || val.soc || 0;
@@ -295,7 +303,7 @@ function App() {
         const bvolt = val.battery_voltage || val.voltage || 0;
         const curr = val.current_amps || val.current || 0;
         
-        csvContent += `${dateStr},${temp},${hum},${nrg},${lux},${occ},${soc},${pwr},${bvolt},${curr}\n`;
+        csvContent += `${dateStr},${temp},${hum},${nrg},${nrg5m},${lux},${occ},${soc},${pwr},${bvolt},${curr}\n`;
       });
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -444,11 +452,18 @@ function App() {
             {/* Top Cards Grid */}
             <div className="dashboard-grid">
               <SensorCard 
-                title="Energy Usage" 
+                title="Accumulated Energy" 
                 value={currentValues.energy} 
                 unit="kWh" 
                 icon={Zap} 
                 color="var(--color-energy)"
+              />
+              <SensorCard 
+                title="5-Min Energy" 
+                value={latest5MinEnergy} 
+                unit="kWh" 
+                icon={Zap} 
+                color="#8b5cf6"
               />
               <SensorCard 
                 title="Temperature" 
@@ -594,10 +609,19 @@ function App() {
               
               <div className="glass-card" style={{ height: '400px' }}>
                 <LineChartWidget 
-                  title={`Energy Consumption (${reportsTimeframe})`}
+                  title={`Accumulated Energy Consumption (${reportsTimeframe})`}
                   data={reportsData}
                   dataKeys={['energy']}
                   colors={['var(--color-energy)']}
+                />
+              </div>
+
+              <div className="glass-card" style={{ height: '400px' }}>
+                <LineChartWidget 
+                  title={`5-Min Energy Consumption (${reportsTimeframe})`}
+                  data={reportsData}
+                  dataKeys={['energy_5min_kWh']}
+                  colors={['#8b5cf6']}
                 />
               </div>
 

@@ -3,7 +3,9 @@ const { getDatabase } = require("firebase-admin/database");
 const { getFirestore } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 
-admin.initializeApp();
+admin.initializeApp({
+  databaseURL: "https://daq-system-rig-default-rtdb.firebaseio.com"
+});
 
 /**
  * Helper to compute averages from an array of objects
@@ -13,21 +15,27 @@ function computeAverage(dataArray) {
   
   const sums = {};
   const counts = {};
+  const latest = {};
   
   for (const item of dataArray) {
     for (const [key, value] of Object.entries(item)) {
       if (typeof value === 'number' && key !== 'timestamp' && key !== 'last_seen') {
         sums[key] = (sums[key] || 0) + value;
         counts[key] = (counts[key] || 0) + 1;
+        latest[key] = value;
       }
     }
   }
   
-  const averages = {};
+  const results = {};
   for (const key in sums) {
-    averages[key] = Number((sums[key] / counts[key]).toFixed(2));
+    if (key === 'occupancy' || key === 'ultrasonic_occupancy') {
+      results[key] = latest[key]; // Use instantaneous (latest) value
+    } else {
+      results[key] = Number((sums[key] / counts[key]).toFixed(2)); // Use average for others
+    }
   }
-  return averages;
+  return results;
 }
 
 /**
@@ -39,8 +47,10 @@ exports.aggregateFiveMinute = onSchedule("*/5 * * * *", async (event) => {
   const firestore = getFirestore();
   const rawLogsRef = db.ref("telemetry/logs");
   
+  console.log("aggregateFiveMinute started. Fetching raw logs...");
   const snapshot = await rawLogsRef.once("value");
   const data = snapshot.val();
+  console.log(`Fetched raw logs. Has data? ${!!data}`);
   
   if (!data) {
     console.log("No raw logs to aggregate.");
@@ -58,9 +68,14 @@ exports.aggregateFiveMinute = onSchedule("*/5 * * * *", async (event) => {
   const averages = computeAverage(logs);
   const timestamp = Date.now();
   
+  // Calculate 5-minute energy (kWh) from average power (Watts)
+  const averagePower = averages.power || averages.load_watts || 0;
+  const energy_5min_kWh = Number(((averagePower * (5 / 60)) / 1000).toFixed(6));
+  
   if (Object.keys(averages).length > 0) {
     await firestore.collection("reports_five_minute").add({
       ...averages,
+      energy_5min_kWh: energy_5min_kWh,
       timestamp: timestamp,
       timeString: new Date(timestamp).toISOString(),
       logCount: logs.length
