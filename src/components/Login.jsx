@@ -12,7 +12,7 @@ const Login = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    if (email === 'abcde' && password === 'cpe2026') {
+    if (email === 'Group1projectdashboard' && password === 'Cpegroup12026') {
       // Simulate a brief loading animation before login
       setIsAnimating(true);
       setTimeout(() => {
