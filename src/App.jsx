@@ -117,8 +117,8 @@ function App() {
           const avgPower = powerBufferRef.current.reduce((sum, r) => sum + r.power, 0) / powerBufferRef.current.length;
           const windowSeconds = (now - powerBufferRef.current[0].timestamp) / 1000;
           const windowHours = windowSeconds / 3600;
-          const energyKwh = (avgPower * windowHours) / 1000;
-          setLiveEnergy(Number(energyKwh.toFixed(6)));
+          const energyWh = (avgPower * windowHours);
+          setLiveEnergy(Number(energyWh.toFixed(3)));
         }
 
         setInverterData({
@@ -482,7 +482,7 @@ function App() {
               <SensorCard 
                 title="Live Energy (1 min)" 
                 value={liveEnergy} 
-                unit="kWh" 
+                unit="Wh" 
                 icon={Zap} 
                 color="#8b5cf6"
               />
