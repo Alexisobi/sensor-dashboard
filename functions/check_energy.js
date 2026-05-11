@@ -20,7 +20,8 @@ async function check() {
     console.log(`  ID: ${doc.id}`);
     console.log(`  Time: ${d.timeString}`);
     console.log(`  Power: ${d.power || 'N/A'}W`);
-    console.log(`  energy_5min_Wh: ${d.energy_5min_Wh !== undefined ? d.energy_5min_Wh : 'MISSING'}`);
+    const nrgWh = d.energy_5min_Wh !== undefined ? d.energy_5min_Wh : (d.energy_5min_kWh !== undefined ? (d.energy_5min_kWh * 1000).toFixed(6) + ' (from kWh)' : 'MISSING');
+    console.log(`  energy_5min_Wh: ${nrgWh}`);
     console.log(`  Accumulated Energy: ${d.energy || 'N/A'} kWh`);
     console.log(`  Log Count: ${d.logCount}`);
     console.log('---');

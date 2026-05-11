@@ -161,7 +161,7 @@ function App() {
       snapshot.forEach((doc) => {
         const val = doc.data();
         if (isFirst) {
-           setLatest5MinEnergy(val.energy_5min_Wh || 0);
+           setLatest5MinEnergy(val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0));
            isFirst = false;
         }
         logs.push({
@@ -261,7 +261,7 @@ function App() {
           temperature: val.temperature || 0,
           humidity: val.humidity || 0,
           energy: val.energy || 0,
-          energy_5min_Wh: val.energy_5min_Wh || 0,
+          energy_5min_Wh: val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0),
           light: val.lux || val.light || 0,
           occupancy: val.ultrasonic_occupancy || val.occupancy || 0,
           soc: val.battery_soc || val.soc || 0
@@ -315,7 +315,7 @@ function App() {
         const temp = val.temperature || 0;
         const hum = val.humidity || 0;
         const nrg = val.energy || 0;
-        const nrg5m = val.energy_5min_Wh || 0;
+        const nrg5m = val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0);
         const lux = val.lux || val.light || 0;
         const occ = val.ultrasonic_occupancy || val.occupancy || 0;
         const soc = val.battery_soc || val.soc || 0;
