@@ -161,7 +161,7 @@ function App() {
       snapshot.forEach((doc) => {
         const val = doc.data();
         if (isFirst) {
-           setLatest5MinEnergy(val.energy_5min_kWh || 0);
+           setLatest5MinEnergy(val.energy_5min_Wh || 0);
            isFirst = false;
         }
         logs.push({
@@ -261,7 +261,7 @@ function App() {
           temperature: val.temperature || 0,
           humidity: val.humidity || 0,
           energy: val.energy || 0,
-          energy_5min_kWh: val.energy_5min_kWh || 0,
+          energy_5min_Wh: val.energy_5min_Wh || 0,
           light: val.lux || val.light || 0,
           occupancy: val.ultrasonic_occupancy || val.occupancy || 0,
           soc: val.battery_soc || val.soc || 0
@@ -307,7 +307,7 @@ function App() {
       }
 
       // Generate CSV
-      let csvContent = "Time,Temperature(C),Humidity(%),Accumulated Energy(kWh),5-Min Energy(kWh),Light(lux),Occupancy,SOC(%),Power(W),Voltage(V),Current(A)\n";
+      let csvContent = "Time,Temperature(C),Humidity(%),Accumulated Energy(kWh),5-Min Energy(Wh),Light(lux),Occupancy,SOC(%),Power(W),Voltage(V),Current(A)\n";
       
       snapshot.forEach(doc => {
         const val = doc.data();
@@ -315,7 +315,7 @@ function App() {
         const temp = val.temperature || 0;
         const hum = val.humidity || 0;
         const nrg = val.energy || 0;
-        const nrg5m = val.energy_5min_kWh || 0;
+        const nrg5m = val.energy_5min_Wh || 0;
         const lux = val.lux || val.light || 0;
         const occ = val.ultrasonic_occupancy || val.occupancy || 0;
         const soc = val.battery_soc || val.soc || 0;
@@ -638,9 +638,9 @@ function App() {
 
               <div className="glass-card" style={{ height: '400px' }}>
                 <LineChartWidget 
-                  title={`5-Min Energy Consumption (${reportsTimeframe})`}
+                  title={`5-Min Energy Consumption (Wh) (${reportsTimeframe})`}
                   data={reportsData}
-                  dataKeys={['energy_5min_kWh']}
+                  dataKeys={['energy_5min_Wh']}
                   colors={['#8b5cf6']}
                 />
               </div>
