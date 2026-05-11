@@ -161,7 +161,8 @@ function App() {
       snapshot.forEach((doc) => {
         const val = doc.data();
         if (isFirst) {
-           setLatest5MinEnergy(val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0));
+           const rawNrg = val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0);
+           setLatest5MinEnergy(Number(rawNrg.toFixed(3)));
            isFirst = false;
         }
         logs.push({
@@ -261,7 +262,7 @@ function App() {
           temperature: val.temperature || 0,
           humidity: val.humidity || 0,
           energy: val.energy || 0,
-          energy_5min_Wh: val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0),
+          energy_5min_Wh: Number((val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0)).toFixed(3)),
           light: val.lux || val.light || 0,
           occupancy: val.ultrasonic_occupancy || val.occupancy || 0,
           soc: val.battery_soc || val.soc || 0
@@ -312,16 +313,16 @@ function App() {
       snapshot.forEach(doc => {
         const val = doc.data();
         const dateStr = format(new Date(val.timestamp), 'yyyy-MM-dd HH:mm:ss');
-        const temp = val.temperature || 0;
-        const hum = val.humidity || 0;
-        const nrg = val.energy || 0;
-        const nrg5m = val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0);
-        const lux = val.lux || val.light || 0;
-        const occ = val.ultrasonic_occupancy || val.occupancy || 0;
-        const soc = val.battery_soc || val.soc || 0;
-        const pwr = val.power || val.load_watts || 0;
-        const volt = val.voltage || 0;
-        const curr = val.current || 0;
+        const temp = Number(val.temperature || 0).toFixed(1);
+        const hum = Number(val.humidity || 0).toFixed(1);
+        const nrg = Number(val.energy || 0).toFixed(3);
+        const nrg5m = Number(val.energy_5min_Wh ?? (val.energy_5min_kWh ? val.energy_5min_kWh * 1000 : 0)).toFixed(3);
+        const lux = Number(val.lux || val.light || 0).toFixed(0);
+        const occ = Number(val.ultrasonic_occupancy || val.occupancy || 0).toFixed(0);
+        const soc = Number(val.battery_soc || val.soc || 0).toFixed(1);
+        const pwr = Number(val.power || val.load_watts || 0).toFixed(1);
+        const volt = Number(val.voltage || 0).toFixed(2);
+        const curr = Number(val.current || 0).toFixed(2);
         
         csvContent += `${dateStr},${temp},${hum},${nrg},${nrg5m},${lux},${occ},${soc},${pwr},${volt},${curr}\n`;
       });

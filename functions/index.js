@@ -70,7 +70,7 @@ exports.aggregateFiveMinute = onSchedule("*/5 * * * *", async (event) => {
 
   // Calculate 5-minute energy (Wh) from average power (Watts)
   const averagePower = averages.power || averages.load_watts || 0;
-  const energy_5min_Wh = Number(((averagePower * (5 / 60))).toFixed(6));
+  const energy_5min_Wh = Number(((averagePower * (5 / 60))).toFixed(3));
   
   if (Object.keys(averages).length > 0) {
     await firestore.collection("reports_five_minute").add({
