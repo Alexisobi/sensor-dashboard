@@ -60,7 +60,7 @@
 
 .charts-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(300px, 1fr) 2fr;
   gap: 1.5rem;
   margin-top: 1rem;
 }

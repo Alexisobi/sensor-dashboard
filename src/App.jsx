@@ -548,7 +548,7 @@ function App() {
             </div>
 
             {/* Charts Section */}
-            <div className="charts-grid" style={{ gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+            <div className="charts-grid" style={{ gap: '1.5rem', marginTop: '1.5rem' }}>
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '350px' }}>
                 <BatteryGauge soc={inverterData.battery_soc} />
               </div>
