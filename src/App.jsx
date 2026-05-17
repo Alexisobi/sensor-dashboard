@@ -540,13 +540,13 @@ function App() {
 
             {/* Charts Section */}
             <div className="charts-grid" style={{ gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '1.5rem', marginTop: '1.5rem' }}>
-              <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-4 flex flex-col justify-center">
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '350px' }}>
                 <BatteryGauge soc={inverterData.battery_soc} />
               </div>
               <div style={{ width: '100%' }}>
                 <LineChartWidget 
-                  title="Live State of Charge (Rolling)"
-                  data={socTrendData}
+                  title="Historical State of Charge (5-Min Avg)"
+                  data={chartData}
                   dataKeys={['soc']}
                   colors={['#3b82f6']}
                   yAxisDomain={[0, 100]}

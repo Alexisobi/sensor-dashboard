@@ -153,23 +153,23 @@ const BatteryGauge = ({ soc }) => {
   };
 
   return (
-    <div className="relative w-full h-full min-h-[300px] flex flex-col items-center justify-between p-4">
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '1rem' }}>
       {/* Title on top */}
-      <h3 className="text-lg font-medium text-white m-0 tracking-wide text-center">Battery State of Charge</h3>
+      <h3 style={{ fontSize: '1.125rem', fontWeight: 500, color: 'white', margin: 0, letterSpacing: '0.05em', textAlign: 'center' }}>Battery State of Charge</h3>
       
       {/* The Doughnut wrapped in a slightly taller container for the ticks/labels padding */}
-      <div className="relative w-full max-w-[300px] flex-1 mt-8 pb-8 flex items-end justify-center">
+      <div style={{ position: 'relative', width: '100%', maxWidth: '300px', flex: 1, marginTop: '2rem', paddingBottom: '2rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
         <Doughnut data={data} options={options} plugins={[gaugeTicks, gaugeNeedle]} />
         
         {/* Exact Digital Value in the center baseline beneath the needle */}
-        <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center justify-end z-10">
-          <span className="text-4xl font-bold text-white tracking-widest">{Math.round(validSoc)}%</span>
+        <div style={{ position: 'absolute', bottom: '1.5rem', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', zIndex: 10 }}>
+          <span style={{ fontSize: '2.25rem', fontWeight: 700, color: 'white', letterSpacing: '0.1em' }}>{Math.round(validSoc)}%</span>
         </div>
       </div>
 
       {/* Battery Level at bottom middle of the tab */}
-      <div className="mt-auto">
-        <span className="text-sm text-gray-400 font-medium tracking-widest uppercase">Battery Level</span>
+      <div style={{ marginTop: 'auto' }}>
+        <span style={{ fontSize: '0.875rem', color: '#9ca3af', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Battery Level</span>
       </div>
     </div>
   );
