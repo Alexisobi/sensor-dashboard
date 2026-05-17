@@ -91,15 +91,16 @@ function App() {
       if (data) {
         setLastDataReceivedAt(Date.now());
         
-        // Debug: log all keys from live data to identify battery field names
-        console.log("🔋 Live data keys:", Object.keys(data));
-        console.log("🔋 Battery fields:", { 
-          battery_soc: data.battery_soc, 
-          soc: data.soc, 
-          battery_voltage: data.battery_voltage,
-          SOC: data.SOC,
-          batterySoc: data.batterySoc 
-        });
+        // Helper: ESP32 UART sends some fields as strings like "29.1 V" or "100.0 %"
+        // This extracts the leading number from any value (string or number)
+        const parseNumeric = (val) => {
+          if (typeof val === 'number') return val;
+          if (typeof val === 'string') {
+            const match = val.match(/[\d.]+/);
+            return match ? parseFloat(match[0]) : 0;
+          }
+          return 0;
+        };
         
         const currentPower = data.power ?? 0;
         
@@ -131,19 +132,23 @@ function App() {
           setLiveEnergy(Number(energyWh.toFixed(3)));
         }
 
+        // Parse battery fields (ESP32 sends these as strings: "29.1 V", "100.0 %")
+        const liveSoc = parseNumeric(data.battery_soc ?? data.Soc ?? data.soc);
+        const liveBattVoltage = parseNumeric(data.battery_voltage ?? data.Battery_voltage);
+
         setInverterData({
-          battery_soc: data.battery_soc ?? data.soc ?? 0,
+          battery_soc: liveSoc,
           current_amps: data.current_amps ?? 0,
           load_watts: data.load_watts ?? 0,
           status: data.status ?? 'Unknown',
           last_seen: data.last_seen ?? null,
-          battery_voltage: data.battery_voltage ?? 0
+          battery_voltage: liveBattVoltage
         });
 
         setSocTrendData(prev => {
           const now = new Date();
           const timeString = format(now, 'HH:mm:ss');
-          const newPoint = { time: timeString, soc: data.battery_soc ?? data.soc ?? 0 };
+          const newPoint = { time: timeString, soc: liveSoc };
           const newArray = [...prev, newPoint];
           return newArray.slice(-30);
         });

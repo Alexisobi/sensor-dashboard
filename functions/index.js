@@ -74,13 +74,23 @@ exports.aggregateFiveMinute = onSchedule("*/5 * * * *", async (event) => {
 
   // Fetch latest battery/inverter data from telemetry/live
   // (ESP32 writes battery fields here but not to telemetry/logs)
+  // Note: ESP32 UART sends these as strings like "29.1 V" and "100.0 %" 
+  const parseNumeric = (val) => {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      const match = val.match(/[\d.]+/);
+      return match ? parseFloat(match[0]) : 0;
+    }
+    return 0;
+  };
+
   const liveSnapshot = await db.ref("telemetry/live").once("value");
   const liveData = liveSnapshot.val() || {};
   const batteryFields = {
-    battery_soc: liveData.battery_soc ?? liveData.soc ?? 0,
-    battery_voltage: liveData.battery_voltage ?? 0,
-    current_amps: liveData.current_amps ?? 0,
-    load_watts: liveData.load_watts ?? 0,
+    battery_soc: parseNumeric(liveData.battery_soc ?? liveData.Soc ?? liveData.soc),
+    battery_voltage: parseNumeric(liveData.battery_voltage ?? liveData.Battery_voltage),
+    current_amps: parseNumeric(liveData.current_amps),
+    load_watts: parseNumeric(liveData.load_watts),
   };
   console.log(`Fetched live battery data: SOC=${batteryFields.battery_soc}, Voltage=${batteryFields.battery_voltage}`);
   
