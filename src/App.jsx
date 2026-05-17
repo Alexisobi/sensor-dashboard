@@ -122,7 +122,7 @@ function App() {
         }
 
         setInverterData({
-          battery_soc: data.battery_soc ?? 0,
+          battery_soc: data.battery_soc ?? data.soc ?? 0,
           current_amps: data.current_amps ?? 0,
           load_watts: data.load_watts ?? 0,
           status: data.status ?? 'Unknown',
@@ -133,7 +133,7 @@ function App() {
         setSocTrendData(prev => {
           const now = new Date();
           const timeString = format(now, 'HH:mm:ss');
-          const newPoint = { time: timeString, value: data.battery_soc ?? 0 };
+          const newPoint = { time: timeString, soc: data.battery_soc ?? data.soc ?? 0 };
           const newArray = [...prev, newPoint];
           return newArray.slice(-30);
         });
@@ -167,7 +167,7 @@ function App() {
         }
         logs.push({
           time: format(new Date(val.timestamp), 'HH:mm'), // Format to hour/min
-          soc: val.battery_soc || 0
+          soc: val.battery_soc ?? val.soc ?? 0
         });
       });
       // Data is ordered desc, so newest is first. Reverse to chart chronologically.
@@ -545,8 +545,8 @@ function App() {
               </div>
               <div style={{ width: '100%' }}>
                 <LineChartWidget 
-                  title="Historical State of Charge"
-                  data={chartData}
+                  title="Live State of Charge (Rolling)"
+                  data={socTrendData}
                   dataKeys={['soc']}
                   colors={['#3b82f6']}
                   yAxisDomain={[0, 100]}
