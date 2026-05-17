@@ -29,7 +29,7 @@ function computeAverage(dataArray) {
 
   const results = {};
   for (const key in sums) {
-    if (key === 'occupancy' || key === 'ultrasonic_occupancy') {
+    if (['occupancy', 'ultrasonic_occupancy', 'battery_soc', 'soc', 'battery_voltage', 'current_amps', 'load_watts'].includes(key)) {
       results[key] = latest[key]; // Use instantaneous (latest) value
     } else {
       results[key] = Number((sums[key] / counts[key]).toFixed(2)); // Use average for others

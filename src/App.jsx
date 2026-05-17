@@ -321,8 +321,8 @@ function App() {
         const occ = Number(val.ultrasonic_occupancy || val.occupancy || 0).toFixed(0);
         const soc = Number(val.battery_soc || val.soc || 0).toFixed(1);
         const pwr = Number(val.power || val.load_watts || 0).toFixed(1);
-        const volt = Number(val.voltage || 0).toFixed(2);
-        const curr = Number(val.current || 0).toFixed(2);
+        const volt = Number(val.voltage || val.battery_voltage || 0).toFixed(2);
+        const curr = Number(val.current || val.current_amps || 0).toFixed(2);
         
         csvContent += `${dateStr},${temp},${hum},${nrg},${nrg5m},${lux},${occ},${soc},${pwr},${volt},${curr}\n`;
       });
