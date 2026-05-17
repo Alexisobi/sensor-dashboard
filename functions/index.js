@@ -71,16 +71,29 @@ exports.aggregateFiveMinute = onSchedule("*/5 * * * *", async (event) => {
   // Calculate 5-minute energy (Wh) from average power (Watts)
   const averagePower = averages.power || averages.load_watts || 0;
   const energy_5min_Wh = Number(((averagePower * (5 / 60))).toFixed(3));
+
+  // Fetch latest battery/inverter data from telemetry/live
+  // (ESP32 writes battery fields here but not to telemetry/logs)
+  const liveSnapshot = await db.ref("telemetry/live").once("value");
+  const liveData = liveSnapshot.val() || {};
+  const batteryFields = {
+    battery_soc: liveData.battery_soc ?? liveData.soc ?? 0,
+    battery_voltage: liveData.battery_voltage ?? 0,
+    current_amps: liveData.current_amps ?? 0,
+    load_watts: liveData.load_watts ?? 0,
+  };
+  console.log(`Fetched live battery data: SOC=${batteryFields.battery_soc}, Voltage=${batteryFields.battery_voltage}`);
   
   if (Object.keys(averages).length > 0) {
     await firestore.collection("reports_five_minute").add({
       ...averages,
+      ...batteryFields,
       energy_5min_Wh: energy_5min_Wh,
       timestamp: timestamp,
       timeString: new Date(timestamp).toISOString(),
       logCount: logs.length
     });
-    console.log(`Saved five-minute average from ${logs.length} logs.`);
+    console.log(`Saved five-minute average from ${logs.length} logs (with live battery data).`);
 
     // Delete processed logs from RTDB to prevent lag
     const updates = {};
