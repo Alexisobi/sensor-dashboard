@@ -545,13 +545,6 @@ function App() {
                 icon={Gauge} 
                 color="#10b981"
               />
-              <SensorCard 
-                title="Battery Current" 
-                value={inverterData.current_amps} 
-                unit="A" 
-                icon={Activity} 
-                color="#3b82f6"
-              />
             </div>
 
             {/* Charts Section */}
