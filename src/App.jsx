@@ -91,6 +91,16 @@ function App() {
       if (data) {
         setLastDataReceivedAt(Date.now());
         
+        // Debug: log all keys from live data to identify battery field names
+        console.log("🔋 Live data keys:", Object.keys(data));
+        console.log("🔋 Battery fields:", { 
+          battery_soc: data.battery_soc, 
+          soc: data.soc, 
+          battery_voltage: data.battery_voltage,
+          SOC: data.SOC,
+          batterySoc: data.batterySoc 
+        });
+        
         const currentPower = data.power ?? 0;
         
         setCurrentValues({
