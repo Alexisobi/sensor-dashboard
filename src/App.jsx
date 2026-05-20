@@ -133,8 +133,8 @@ function App() {
         }
 
         // Parse battery fields (ESP32 sends these as strings: "29.1 V", "100.0 %")
-        const liveSoc = parseNumeric(data.battery_soc ?? data.Soc ?? data.soc);
-        const liveBattVoltage = parseNumeric(data.battery_voltage ?? data.Battery_voltage);
+        const liveSoc = parseNumeric(data.soc);
+        const liveBattVoltage = parseNumeric(data.battery_voltage);
 
         setInverterData({
           battery_soc: liveSoc,

@@ -87,10 +87,8 @@ exports.aggregateFiveMinute = onSchedule("*/5 * * * *", async (event) => {
   const liveSnapshot = await db.ref("telemetry/live").once("value");
   const liveData = liveSnapshot.val() || {};
   const batteryFields = {
-    battery_soc: parseNumeric(liveData.battery_soc ?? liveData.Soc ?? liveData.soc),
-    battery_voltage: parseNumeric(liveData.battery_voltage ?? liveData.Battery_voltage),
-    current_amps: parseNumeric(liveData.current_amps),
-    load_watts: parseNumeric(liveData.load_watts),
+    battery_soc: parseNumeric(liveData.soc),
+    battery_voltage: parseNumeric(liveData.battery_voltage),
   };
   console.log(`Fetched live battery data: SOC=${batteryFields.battery_soc}, Voltage=${batteryFields.battery_voltage}`);
   
