@@ -38,7 +38,7 @@ function App() {
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   const [latest5MinEnergy, setLatest5MinEnergy] = useState(0);
-  const [liveEnergy, setLiveEnergy] = useState(2.29);
+  const [liveEnergy, setLiveEnergy] = useState(0);
   const powerBufferRef = useRef([]);
   
   // CSV Download State
@@ -48,14 +48,14 @@ function App() {
   const [isDownloading, setIsDownloading] = useState(false);
   // Real-time current values initialized to 0
   const [currentValues, setCurrentValues] = useState({
-    energy: 27.620,
+    energy: 0,
     temperature: 0,
     humidity: 0,
     light: 0,
     occupancy: 0,
     current: 0,
     voltage: 0,
-    power: 137.2,
+    power: 0,
     presence: 0
   });
 
@@ -105,14 +105,14 @@ function App() {
         const currentPower = data.power ?? 0;
         
         setCurrentValues({
-          energy: 27.620, // HARDCODED for screenshot
+          energy: data.energy ?? 0,
           temperature: data.temperature ?? 0,
           humidity: data.humidity ?? 0,
           light: data.lux ?? data.light ?? 0,                  
           occupancy: data.ultrasonic_occupancy ?? data.occupancy ?? 0, 
           current: data.current ?? 0,
           voltage: data.voltage ?? 0,
-          power: 137.2, // HARDCODED for screenshot
+          power: currentPower,
           presence: data.radar_motion ?? data.presence ?? 0
         });
 
@@ -129,10 +129,8 @@ function App() {
           const windowSeconds = (now - powerBufferRef.current[0].timestamp) / 1000;
           const windowHours = windowSeconds / 3600;
           const energyWh = (avgPower * windowHours);
-          // setLiveEnergy(Number(energyWh.toFixed(3)));
+          setLiveEnergy(Number(energyWh.toFixed(3)));
         }
-        // HARDCODED for screenshot
-        setLiveEnergy(2.29);
 
         // Parse battery fields (ESP32 sends these as strings: "29.1 V", "100.0 %")
         const liveSoc = parseNumeric(data.soc);
