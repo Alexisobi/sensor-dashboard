@@ -38,7 +38,7 @@ function App() {
   const [chartData, setChartData] = useState([]); // Start empty
   const [reportsData, setReportsData] = useState([]); // Specifically for the Reports view
   const [latest5MinEnergy, setLatest5MinEnergy] = useState(0);
-  const [liveEnergy, setLiveEnergy] = useState(0);
+  const [liveEnergy, setLiveEnergy] = useState(2.29);
   const powerBufferRef = useRef([]);
   
   // CSV Download State
@@ -48,14 +48,14 @@ function App() {
   const [isDownloading, setIsDownloading] = useState(false);
   // Real-time current values initialized to 0
   const [currentValues, setCurrentValues] = useState({
-    energy: 0,
+    energy: 27.620,
     temperature: 0,
     humidity: 0,
     light: 0,
     occupancy: 0,
     current: 0,
     voltage: 0,
-    power: 0,
+    power: 137.2,
     presence: 0
   });
 
