@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 import { getFirestore } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // TODO: Replace these with your actual Firebase project configuration
 // You can find these in your Firebase Console -> Project Settings -> General -> Your apps
@@ -22,3 +23,10 @@ export const db = getDatabase(app);
 
 // Initialize Cloud Firestore and get a reference to the service
 export const firestoreDb = getFirestore(app);
+
+// Initialize Cloud Functions
+export const functions = getFunctions(app);
+
+// Callable function references
+export const generateTokenFn = httpsCallable(functions, 'generateToken');
+export const redeemTokenFn = httpsCallable(functions, 'redeemToken');

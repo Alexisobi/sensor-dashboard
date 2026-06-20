@@ -16,21 +16,27 @@ import {
   Power,
   Gauge,
   Radar,
-  Download
+  Download,
+  Coins
 } from 'lucide-react';
 import { format, subHours, subDays, subWeeks, subMonths } from 'date-fns';
 import { ref, onValue, push, set, query as rtdbQuery, orderByChild, limitToLast, update } from 'firebase/database';
-import { collection, query as fsQuery, orderBy, limit, onSnapshot, getDocs, where } from 'firebase/firestore';
+import { collection, query as fsQuery, orderBy, limit, onSnapshot, getDocs, where, doc } from 'firebase/firestore';
 import { db, firestoreDb } from './firebase'; // Import both db and firestoreDb
 
 import SensorCard from './components/SensorCard';
 import LineChartWidget from './components/LineChartWidget';
 import Login from './components/Login';
 import BatteryGauge from './components/BatteryGauge';
+import LoadUnit from './components/LoadUnit';
 import './App.css';
+
+// Billing constants
+const LOW_CREDIT_THRESHOLD = 5; // kWh
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loggedInUsername, setLoggedInUsername] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -71,6 +77,15 @@ function App() {
   const [socTrendData, setSocTrendData] = useState([]);
   
   const [lastDataReceivedAt, setLastDataReceivedAt] = useState(Date.now());
+
+  // ============ ENERGY CREDIT STATE ============
+  const [energyState, setEnergyState] = useState({
+    total_available_credit: 0,
+    baseline_energy: 0,
+    last_token_redeemed_at: null
+  });
+  const [displayedCredit, setDisplayedCredit] = useState(0);
+  const [creditStatus, setCreditStatus] = useState('normal'); // 'normal' | 'low' | 'depleted'
 
   // Removed EXPERIMENTAL Mock Data Pumper since hardware handles real data pushing
 
@@ -162,6 +177,84 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // ============ ENERGY CREDIT: Listen to energy_state Firestore doc ============
+  useEffect(() => {
+    if (!loggedInUsername) return;
+
+    const energyStateRef = doc(firestoreDb, 'energy_state', loggedInUsername);
+    const unsubscribe = onSnapshot(energyStateRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setEnergyState({
+          total_available_credit: data.total_available_credit || 0,
+          baseline_energy: data.baseline_energy || 0,
+          last_token_redeemed_at: data.last_token_redeemed_at || null
+        });
+      } else {
+        // No energy state yet — user hasn't loaded any tokens
+        setEnergyState({
+          total_available_credit: 0,
+          baseline_energy: 0,
+          last_token_redeemed_at: null
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [loggedInUsername]);
+
+  // ============ ENERGY CREDIT: Real-time metering algorithm ============
+  useEffect(() => {
+    // Only compute if user has loaded tokens (has a baseline)
+    if (energyState.last_token_redeemed_at === null) {
+      setDisplayedCredit(0);
+      setCreditStatus('normal');
+      return;
+    }
+
+    const energyConsumedSinceLoad = currentValues.energy - energyState.baseline_energy;
+    let credit = energyState.total_available_credit - energyConsumedSinceLoad;
+    
+    // Precision-safe rounding to prevent UI flickering
+    credit = Math.round(credit * 100) / 100;
+    credit = Math.max(0, credit);
+
+    setDisplayedCredit(credit);
+
+    // Determine credit status
+    if (credit <= 0) {
+      setCreditStatus('depleted');
+    } else if (credit <= LOW_CREDIT_THRESHOLD) {
+      setCreditStatus('low');
+    } else {
+      setCreditStatus('normal');
+    }
+  }, [currentValues.energy, energyState]);
+
+  // ============ RELAY CUTOFF: Write to RTDB when credit depletes ============
+  useEffect(() => {
+    if (!loggedInUsername) return;
+    if (energyState.last_token_redeemed_at === null) return; // No tokens loaded yet
+
+    const relayCutoffRef = ref(db, 'control/relay_cutoff');
+
+    if (creditStatus === 'depleted') {
+      // Credit depleted — trigger relay cutoff (0 = OFF)
+      set(relayCutoffRef, 0).then(() => {
+        console.log("⚡ RELAY CUTOFF: Credit depleted. Wrote 0 to control/relay_cutoff (OFF)");
+      }).catch((err) => {
+        console.error("Failed to write relay cutoff:", err);
+      });
+    } else {
+      // Credit available — ensure relay is ON (1 = ON)
+      set(relayCutoffRef, 1).then(() => {
+        console.log("✅ RELAY ON: Credit available. Wrote 1 to control/relay_cutoff (ON)");
+      }).catch((err) => {
+        console.error("Failed to write relay on:", err);
+      });
+    }
+  }, [creditStatus, loggedInUsername, energyState.last_token_redeemed_at]);
+
   // 2. Fetch Historical Data for SOC Chart (Live from Firestore)
   useEffect(() => {
     const q = fsQuery(
@@ -208,6 +301,7 @@ function App() {
       if (isAuthenticated) {
         timeoutId = setTimeout(() => {
           setIsAuthenticated(false);
+          setLoggedInUsername('');
         }, 420000);
       }
     };
@@ -374,9 +468,32 @@ function App() {
     });
   }
 
-  if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  // Credit depleted alert
+  if (energyState.last_token_redeemed_at !== null && creditStatus === 'depleted') {
+    activeAlerts.push({
+      id: 'credit-depleted',
+      level: 'critical',
+      message: `Energy Credit Depleted: Your energy credit has been fully consumed. Relay cutoff has been triggered. Load a new token to restore service.`,
+      timestamp: new Date()
+    });
   }
+
+  // Low credit alert
+  if (energyState.last_token_redeemed_at !== null && creditStatus === 'low') {
+    activeAlerts.push({
+      id: 'credit-low',
+      level: 'warning',
+      message: `Low Energy Credit: Only ${displayedCredit.toFixed(2)} kWh remaining. Please purchase and load more credit to avoid service interruption.`,
+      timestamp: new Date()
+    });
+  }
+
+  if (!isAuthenticated) {
+    return <Login onLogin={(username) => { setIsAuthenticated(true); setLoggedInUsername(username); }} />;
+  }
+
+  // Determine credit card color
+  const creditCardColor = creditStatus === 'normal' ? '#10b981' : '#ef4444';
 
   return (
     <div className="app-container">
@@ -406,7 +523,8 @@ function App() {
               borderRadius: '12px', 
               backgroundColor: activeTab === 'dashboard' ? 'rgba(255,255,255,0.1)' : 'transparent', 
               color: activeTab === 'dashboard' ? 'white' : 'var(--text-secondary)', 
-              fontWeight: activeTab === 'dashboard' ? 500 : 'normal'
+              fontWeight: activeTab === 'dashboard' ? 500 : 'normal',
+              cursor: 'pointer'
             }}>
             <LayoutDashboard size={20} />
             Dashboard
@@ -420,11 +538,42 @@ function App() {
               borderRadius: '12px', 
               backgroundColor: activeTab === 'reports' ? 'rgba(255,255,255,0.1)' : 'transparent', 
               color: activeTab === 'reports' ? 'white' : 'var(--text-secondary)', 
-              fontWeight: activeTab === 'reports' ? 500 : 'normal'
+              fontWeight: activeTab === 'reports' ? 500 : 'normal',
+              cursor: 'pointer'
             }}>
             <BarChart2 size={20} />
             Reports & Analytics
           </div>
+
+          <div 
+            className={`sidebar-link ${activeTab === 'loadunit' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('loadunit'); setIsMobileMenuOpen(false); }}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+              borderRadius: '12px', 
+              backgroundColor: activeTab === 'loadunit' ? 'rgba(255,255,255,0.1)' : 'transparent', 
+              color: activeTab === 'loadunit' ? 'white' : 'var(--text-secondary)', 
+              fontWeight: activeTab === 'loadunit' ? 500 : 'normal',
+              cursor: 'pointer',
+              position: 'relative'
+            }}>
+            <Coins size={20} />
+            Load Unit
+            {creditStatus === 'depleted' && (
+              <span style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                backgroundColor: '#ef4444', marginLeft: 'auto',
+                animation: 'pulse 1.5s infinite'
+              }}></span>
+            )}
+            {creditStatus === 'low' && (
+              <span style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                backgroundColor: '#f59e0b', marginLeft: 'auto',
+              }}></span>
+            )}
+          </div>
+
           <div 
             className={`sidebar-link ${activeTab === 'alerts' ? 'active' : ''}`}
             onClick={() => { setActiveTab('alerts'); setIsMobileMenuOpen(false); }}
@@ -433,21 +582,37 @@ function App() {
               borderRadius: '12px', 
               backgroundColor: activeTab === 'alerts' ? 'rgba(255,255,255,0.1)' : 'transparent', 
               color: activeTab === 'alerts' ? 'white' : 'var(--text-secondary)', 
-              fontWeight: activeTab === 'alerts' ? 500 : 'normal'
+              fontWeight: activeTab === 'alerts' ? 500 : 'normal',
+              cursor: 'pointer'
             }}>
             <Bell size={20} />
             Alerts
+            {activeAlerts.length > 0 && (
+              <span style={{
+                marginLeft: 'auto',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                padding: '2px 6px',
+                borderRadius: '10px',
+                minWidth: '18px',
+                textAlign: 'center'
+              }}>{activeAlerts.length}</span>
+            )}
           </div>
+
           <div 
             className="sidebar-link"
-            onClick={() => setIsAuthenticated(false)}
+            onClick={() => { setIsAuthenticated(false); setLoggedInUsername(''); }}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
               borderRadius: '12px', 
               backgroundColor: 'transparent', 
               color: '#ef4444', 
               fontWeight: 'normal',
-              marginTop: '1rem'
+              marginTop: '1rem',
+              cursor: 'pointer'
             }}>
             <LogOut size={20} />
             Logout
@@ -458,7 +623,7 @@ function App() {
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>System Status</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activeAlerts.length > 0 ? '#ef4444' : '#10b981' }}></div>
-            <span style={{ fontSize: '0.9rem', color: 'white' }}>{activeAlerts.length > 0 ? 'Sensor Offline' : 'All sensors active'}</span>
+            <span style={{ fontSize: '0.9rem', color: 'white' }}>{activeAlerts.length > 0 ? 'Attention Required' : 'All systems active'}</span>
           </div>
         </div>
       </aside>
@@ -475,7 +640,7 @@ function App() {
           <div className="header-actions">
             <div className="mobile-sensor-status">
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activeAlerts.length > 0 ? '#ef4444' : '#10b981' }}></div>
-              <span style={{ fontSize: '0.85rem', color: 'white' }}>Status: {activeAlerts.length > 0 ? 'Offline' : 'Active'}</span>
+              <span style={{ fontSize: '0.85rem', color: 'white' }}>Status: {activeAlerts.length > 0 ? 'Attention' : 'Active'}</span>
             </div>
             <button onClick={() => setActiveTab('alerts')} className="alerts-btn" style={{ backgroundColor: activeAlerts.length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'var(--glass-bg)', border: activeAlerts.length > 0 ? '1px solid #ef4444' : 'var(--glass-border)', color: activeAlerts.length > 0 ? '#ef4444' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer' }}>
               <Bell size={18} />
@@ -502,6 +667,16 @@ function App() {
                 icon={Zap} 
                 color="#8b5cf6"
               />
+              {/* Energy Credit Card */}
+              {energyState.last_token_redeemed_at !== null && (
+                <SensorCard 
+                  title="Energy Credit" 
+                  value={displayedCredit.toFixed(2)} 
+                  unit="kWh" 
+                  icon={Coins} 
+                  color={creditCardColor}
+                />
+              )}
               <SensorCard 
                 title="Temperature" 
                 value={currentValues.temperature} 
@@ -685,7 +860,13 @@ function App() {
           </div>
         )}
 
-
+        {activeTab === 'loadunit' && (
+          <LoadUnit 
+            username={loggedInUsername}
+            currentCredit={displayedCredit}
+            creditStatus={creditStatus}
+          />
+        )}
 
         {activeTab === 'alerts' && (
           <div style={{ padding: '2rem', backgroundColor: 'var(--glass-bg)', border: 'var(--glass-border)', borderRadius: '16px', marginTop: '2rem' }}>
@@ -697,15 +878,15 @@ function App() {
             ) : (
                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                  {activeAlerts.map(alert => (
-                   <div key={alert.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', color: '#f8fafc' }}>
-                     <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '50%', display: 'flex' }}>
-                       <Bell size={24} className="text-red-500" />
+                   <div key={alert.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '1rem', backgroundColor: alert.level === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)', border: `1px solid ${alert.level === 'critical' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`, borderRadius: '12px', color: '#f8fafc' }}>
+                     <div style={{ backgroundColor: alert.level === 'critical' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', padding: '10px', borderRadius: '50%', display: 'flex' }}>
+                       <Bell size={24} style={{ color: alert.level === 'critical' ? '#ef4444' : '#f59e0b' }} />
                      </div>
                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                       <span style={{ fontWeight: 700, color: '#ef4444' }}>{alert.level.toUpperCase()} WARNING</span>
+                       <span style={{ fontWeight: 700, color: alert.level === 'critical' ? '#ef4444' : '#f59e0b' }}>{alert.level.toUpperCase()} {alert.level === 'critical' ? 'ALERT' : 'WARNING'}</span>
                        <span style={{ fontSize: '0.95rem', marginTop: '2px' }}>{alert.message}</span>
                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                         Last recorded heartbeat: {format(alert.timestamp, 'MMM do, yyyy HH:mm:ss')}
+                         {format(alert.timestamp, 'MMM do, yyyy HH:mm:ss')}
                        </span>
                      </div>
                    </div>
@@ -765,6 +946,14 @@ function App() {
         )}
 
       </main>
+
+      {/* Pulse animation for credit warnings */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}} />
     </div>
   );
 }
